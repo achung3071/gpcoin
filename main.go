@@ -2,17 +2,19 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/achung3071/gpcoin/blockchain"
+	"log"
+	"net/http"
 )
 
+const port string = ":8080"
+
+// basic handler for route
+func home(rw http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(rw, "This is the home page.") // Format & write to response writer
+}
+
 func main() {
-	chain := blockchain.GetBlockchain()
-	chain.AddBlock("Second block")
-	chain.AddBlock("Third block")
-	for _, block := range chain.GetBlocks() {
-		fmt.Printf("Data: %s\n", block.Data)
-		fmt.Printf("Hash: %s\n", block.Hash)
-		fmt.Printf("Prev hash: %s\n\n", block.PrevHash)
-	}
+	fmt.Printf("Listening on http://localhost%s\n", port)
+	http.HandleFunc("/", home)
+	log.Fatal(http.ListenAndServe(port, nil)) // log when ListenAndServe returns an error
 }
