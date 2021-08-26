@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/achung3071/gpcoin/utils"
 )
 
 const port string = ":5000"
 
 type URLDescription struct {
-	URL         string
-	Method      string
-	Description string
+	URL         string `json:"url"` // struct field tag -> renames based on encoding
+	Method      string `json:"method"`
+	Description string `json:"description"`
+	Payload     string `json:"payload,omitempty"` // omits this field when non-existent
 }
 
 func documentation(rw http.ResponseWriter, r *http.Request) {
@@ -23,11 +22,17 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			URL:         "/",
 			Method:      "GET",
 			Description: "Documentation of all endpoints",
+			Payload:     "",
+		},
+		{
+			URL:         "/blocks",
+			Method:      "POST",
+			Description: "Add a block",
+			Payload:     "string for data field",
 		},
 	}
-	b, err := json.Marshal(urls) // returns JSON in byte format
-	utils.ErrorHandler(err)
-	fmt.Fprintf(rw, "%s", b)
+	rw.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
 
 func main() {
