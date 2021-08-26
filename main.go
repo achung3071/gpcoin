@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/achung3071/gpcoin/blockchain"
 )
 
 const port string = ":5000"
@@ -38,24 +40,49 @@ type URLDescription struct {
 func documentation(rw http.ResponseWriter, r *http.Request) {
 	urls := []URLDescription{
 		{
-			URL:         "/",
+			URL:         URL("/"),
 			Method:      "GET",
 			Description: "Documentation of all endpoints",
 			Payload:     "",
 		},
 		{
-			URL:         "/blocks",
+			URL:         URL("/blocks"),
+			Method:      "GET",
+			Description: "Get all blocks",
+			Payload:     "",
+		},
+		{
+			URL:         URL("/blocks"),
 			Method:      "POST",
 			Description: "Add a block",
-			Payload:     "string for data field",
+			Payload:     "{data: string}",
 		},
 	}
 	rw.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
 
+type PostBlocksBody struct {
+	Data string
+}
+
+func blocks(rw http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		rw.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(rw).Encode(blockchain.GetBlockchain().GetBlocks())
+	case "POST":
+		var blockData PostBlocksBody
+		// save body in blockData variable (decoder automatically maps lowercase data -> Data)
+		json.NewDecoder(r.Body).Decode(&blockData)
+		blockchain.GetBlockchain().AddBlock(blockData.Data) // add to blockchain
+		rw.WriteHeader(http.StatusCreated)                  // response 201
+	}
+}
+
 func main() {
 	http.HandleFunc("/", documentation)
+	http.HandleFunc("/blocks", blocks)
 	fmt.Printf("Listening on http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
