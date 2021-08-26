@@ -1,0 +1,16 @@
+{{define "home"}}
+<!DOCTYPE html>
+<html lang="en">
+  {{template "head"}}
+  <body>
+    <!--Pass the data along to partials using `.`-->
+    {{template "header" .PageTitle}}
+    <main>
+      {{range .Blocks}}
+        {{template "block" .}}
+      {{end}}
+    </main>
+    {{template "footer" }}
+  </body>
+</html>
+{{end}}
