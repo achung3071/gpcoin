@@ -9,7 +9,6 @@ import (
 	"github.com/achung3071/gpcoin/blockchain"
 )
 
-const port string = ":4000"
 const tempDir string = "webapp/templates/"
 
 var templates *template.Template
@@ -39,13 +38,18 @@ func add(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Start() {
-	// template.Must does automatic error handling (log.Panic) for errors
-	// that are returned when parsing a template file
+func Start(portNum int) {
+	// Ensure that diff. multiplexers (thing which calls handler funcs based on request url)
+	// are used for web & rest API, so that there is no error regarding duplicate endpoints
+	handler := http.NewServeMux()
+	handler.HandleFunc("/", home)
+	handler.HandleFunc("/add", add)
+
+	// template.Must does automatic error handling (log.Panic) when parsing a template file
 	templates = template.Must(template.ParseGlob(tempDir + "pages/*.html"))     // get pages
 	templates = template.Must(templates.ParseGlob(tempDir + "partials/*.html")) // get partials
+
+	port := fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)
-	http.HandleFunc("/", home)
-	http.HandleFunc("/add", add)
-	log.Fatal(http.ListenAndServe(port, nil)) // log when ListenAndServe returns an error
+	log.Fatal(http.ListenAndServe(port, handler)) // log when ListenAndServe returns an error
 }
