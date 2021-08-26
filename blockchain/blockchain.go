@@ -6,14 +6,14 @@ import (
 	"sync"
 )
 
-type block struct {
+type Block struct {
 	Data     string
 	Hash     string
 	PrevHash string
 }
 
 type blockchain struct {
-	blocks []*block // use pointers to prevent copying blocks
+	blocks []*Block // use pointers to prevent copying blocks
 }
 
 var b *blockchain // Holds singleton instance of blockchain
@@ -38,15 +38,15 @@ func (b *blockchain) getLastHash() string {
 	return b.blocks[len(b.blocks)-1].Hash
 }
 
-func (b *block) calcHash() {
+func (b *Block) calcHash() {
 	// hash data with prev hash  using SHA256 - need to convert string to []byte
 	hash := sha256.Sum256([]byte(b.Data + b.PrevHash))
 	b.Hash = fmt.Sprintf("%x", hash) // hex number as hash
 }
 
-func createBlock(data string) *block {
+func createBlock(data string) *Block {
 	chain := GetBlockchain()
-	newBlock := block{data, "", chain.getLastHash()}
+	newBlock := Block{data, "", chain.getLastHash()}
 	newBlock.calcHash()
 	return &newBlock
 }
@@ -55,6 +55,6 @@ func (b *blockchain) AddBlock(data string) {
 	b.blocks = append(b.blocks, createBlock(data))
 }
 
-func (b *blockchain) GetBlocks() []*block {
+func (b *blockchain) GetBlocks() []*Block {
 	return b.blocks
 }

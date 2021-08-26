@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css" />
+    <title>GPCoin</title>
+  </head>
+  <body>
+    <header>
+      <h2>{{.PageTitle}}</h2>
+    </header>
+    <main>
+      <ul>
+        {{range .Blocks}}
+        <!--Iterate through each block & access fields with .-->
+        <li>Name: {{.Data}}</li>
+        <li>Hash: {{.Hash}}</li>
+        <li>Previous hash: {{.PrevHash}}</li>
+        <br></br>
+        {{end}}
+      </ul>
+    </main>
+  </body>
+</html>
