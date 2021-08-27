@@ -6,35 +6,29 @@ import (
 	"os"
 
 	"github.com/achung3071/gpcoin/api"
+	"github.com/achung3071/gpcoin/webapp"
 )
 
 func instructions() {
 	fmt.Printf("This is the GPCoin CLI.\n\n")
-	fmt.Printf("Use one of the following commands:\n\n")
-	fmt.Println("web:	Run the HTML web application")
-	fmt.Println("api:	Run the REST API server")
+	fmt.Printf("Please use the following flags\n\n")
+	fmt.Println("-mode:		Must be one of 'api', 'web'")
+	fmt.Println("-port:		Set the port that the server should run on")
 	os.Exit(0) // no error; Exit(1) is an eror
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		instructions()
-	}
+	// automatically get flags from CLI and parse
+	mode := flag.String("mode", "api", "Must be one of 'api', 'web'")
+	port := flag.Int("port", 5000, "Set the port that the server should run on")
+	flag.Parse()
 
-	// can specify set of flags & how to handle flag errors
-	apiFlagSet := flag.NewFlagSet("api", flag.ExitOnError)
-	portFlag := apiFlagSet.Int("port", 5000, "Sets the port of the REST API server")
-
-	switch os.Args[1] {
+	switch *mode {
 	case "web":
-		fmt.Println("Starting web app...")
+		webapp.Start(*port)
 	case "api":
-		apiFlagSet.Parse(os.Args[2:]) // parse flags from 2nd arg onwards
+		api.Start(*port)
 	default:
 		instructions()
-	}
-
-	if apiFlagSet.Parsed() {
-		api.Start(*portFlag)
 	}
 }
