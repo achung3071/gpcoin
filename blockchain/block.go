@@ -1,9 +1,7 @@
 package blockchain
 
 import (
-	"bytes"
 	"crypto/sha256"
-	"encoding/gob"
 	"fmt"
 
 	"github.com/achung3071/gpcoin/db"
@@ -17,21 +15,13 @@ type Block struct {
 	Height   int    `json:"height"`
 }
 
-// Convert block to bytes
-func (b *Block) toBytes() []byte {
-	var blockBuffer bytes.Buffer
-	err := gob.NewEncoder(&blockBuffer).Encode(b)
-	utils.ErrorHandler(err)
-	return blockBuffer.Bytes()
-}
-
 // Save block in DB
 func (b *Block) commit() {
-	db.SaveBlock(b.Hash, b.toBytes())
+	db.SaveBlock(b.Hash, utils.ToBytes(b))
 }
 
 func createBlock(data string, prevHash string, height int) *Block {
-	newBlock := &Block{data, "", prevHash, height + 1}
+	newBlock := &Block{data, "", prevHash, height}
 	payload := newBlock.Data + newBlock.PrevHash + fmt.Sprint(newBlock.Height)
 	newBlock.Hash = fmt.Sprintf("%x", sha256.Sum256([]byte(payload)))
 	newBlock.commit()

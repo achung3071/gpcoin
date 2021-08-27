@@ -12,6 +12,7 @@ var db *bolt.DB
 const (
 	dbName           string = "blockchain.db"
 	dataBucketName   string = "data"
+	dataBucketKey    string = "metadata"
 	blocksBucketName string = "blocks"
 )
 
@@ -46,8 +47,19 @@ func SaveBlock(hash string, data []byte) {
 func SaveBlockchain(data []byte) {
 	err := DB().Update(func(t *bolt.Tx) error {
 		dataBucket := t.Bucket([]byte(dataBucketName))
-		err := dataBucket.Put([]byte("metadata"), data) // updata db with chain data
+		err := dataBucket.Put([]byte(dataBucketKey), data) // updata db with chain data
 		return err
 	})
 	utils.ErrorHandler(err)
+}
+
+// For getting an existing blockchain from the db
+func GetBlockchain() []byte {
+	var data []byte // variable to store blockchain data in
+	DB().View(func(t *bolt.Tx) error {
+		dataBucket := t.Bucket([]byte(dataBucketName))
+		data = dataBucket.Get([]byte(dataBucketKey))
+		return nil // no error here
+	})
+	return data
 }
