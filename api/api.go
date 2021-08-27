@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/achung3071/gpcoin/blockchain"
+	"github.com/gorilla/mux"
 )
 
 var port string
@@ -57,6 +59,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Description: "Add a block",
 			Payload:     "{data: string}",
 		},
+		{
+			URL:         url("/blocks/{height}"),
+			Method:      "GET",
+			Description: "Get a specific block",
+			Payload:     "",
+		},
 	}
 	rw.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
@@ -80,15 +88,24 @@ func blocks(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Start(portNum int) {
-	// Ensure that diff. multiplexers (thing which calls handler funcs based on request url)
-	// are used for web & rest API, so that there is no error regarding duplicate endpoints
-	handler := http.NewServeMux()
+func block(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	heightStr := vars["height"]
+	height, _ := strconv.Atoi(heightStr)
+	block := blockchain.GetBlockchain().GetBlock(height)
+	rw.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(rw).Encode(block)
+}
 
-	handler.HandleFunc("/", documentation)
-	handler.HandleFunc("/blocks", blocks)
+func Start(portNum int) {
+	// Use mux from gorilla to specify a new multiplexer
+	router := mux.NewRouter()
+
+	router.HandleFunc("/", documentation).Methods("GET")
+	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
+	router.HandleFunc("/blocks/{height:[0-9]+}", block).Methods("GET")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)
-	log.Fatal(http.ListenAndServe(port, handler)) // log when ListenAndServe returns an error
+	log.Fatal(http.ListenAndServe(port, router)) // log when ListenAndServe returns an error
 }
