@@ -75,15 +75,13 @@ type postBlocksBody struct {
 func blocks(rw http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		return
-		// json.NewEncoder(rw).Encode(blockchain.Blockchain().GetBlocks())
+		json.NewEncoder(rw).Encode(blockchain.Blockchain().Blocks())
 	case "POST":
-		return
-		// var blockData postBlocksBody
-		// // save body in blockData variable (decoder automatically maps lowercase data -> Data)
-		// json.NewDecoder(r.Body).Decode(&blockData)
-		// blockchain.Blockchain().AddBlock(blockData.Data) // add to blockchain
-		// rw.WriteHeader(http.StatusCreated)               // response 201
+		var blockData postBlocksBody
+		// save body in blockData variable (decoder automatically maps lowercase data -> Data)
+		json.NewDecoder(r.Body).Decode(&blockData)
+		blockchain.Blockchain().AddBlock(blockData.Data) // add to blockchain
+		rw.WriteHeader(http.StatusCreated)               // response 201
 	}
 }
 

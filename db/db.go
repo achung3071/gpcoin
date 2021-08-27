@@ -74,3 +74,8 @@ func Block(hash string) []byte {
 	})
 	return data
 }
+
+// Close database
+func Close() {
+	DB().Close()
+}

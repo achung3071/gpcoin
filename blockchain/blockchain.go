@@ -47,3 +47,20 @@ func (b *blockchain) AddBlock(data string) {
 	b.Height = newBlock.Height
 	b.commit()
 }
+
+// Get all blocks
+func (b *blockchain) Blocks() []*Block {
+	var blocks []*Block
+	currHash := b.LastHash
+	for {
+		block, err := FindBlock(currHash)
+		utils.ErrorHandler(err)
+		blocks = append(blocks, block)
+		if block.PrevHash != "" { // not the first block
+			currHash = block.PrevHash
+		} else {
+			break
+		}
+	}
+	return blocks
+}

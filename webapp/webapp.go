@@ -21,7 +21,7 @@ type tempData struct {
 
 // basic handler for route
 func home(rw http.ResponseWriter, r *http.Request) {
-	data := tempData{"GPCoin Blockchain", nil}
+	data := tempData{"GPCoin Blockchain", blockchain.Blockchain().Blocks()}
 	templates.ExecuteTemplate(rw, "home", data)
 }
 

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/achung3071/gpcoin/blockchain"
 	"github.com/achung3071/gpcoin/cli"
+	"github.com/achung3071/gpcoin/db"
 )
 
 func main() {
-	blockchain.Blockchain()
+	defer db.Close() // close db connection when program exits
 	cli.Start()
 }
