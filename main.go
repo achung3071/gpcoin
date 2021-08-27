@@ -1,7 +1,9 @@
 package main
 
-import "github.com/achung3071/gpcoin/cli"
+import (
+	"github.com/achung3071/gpcoin/blockchain"
+)
 
 func main() {
-	cli.Start()
+	blockchain.Blockchain()
 }
