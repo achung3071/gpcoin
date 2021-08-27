@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/achung3071/gpcoin/blockchain"
+	"github.com/achung3071/gpcoin/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -88,13 +89,23 @@ func blocks(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type errResponse struct {
+	ErrorMessage string `json:"errorMessage"`
+}
+
 func block(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	heightStr := vars["height"]
-	height, _ := strconv.Atoi(heightStr)
-	block := blockchain.GetBlockchain().GetBlock(height)
+	height, err := strconv.Atoi(heightStr) // convert to int
+	utils.ErrorHandler(err)
 	rw.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(rw).Encode(block)
+	block, err := blockchain.GetBlockchain().GetBlock(height) // get block based on height
+	if err == blockchain.ErrBlockNotFound {
+		rw.WriteHeader(404)
+		json.NewEncoder(rw).Encode(errResponse{fmt.Sprint(err)})
+	} else {
+		json.NewEncoder(rw).Encode(block)
+	}
 }
 
 func Start(portNum int) {
