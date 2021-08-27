@@ -54,12 +54,23 @@ func SaveBlockchain(data []byte) {
 }
 
 // For getting an existing blockchain from the db
-func GetBlockchain() []byte {
+func Blockchain() []byte {
 	var data []byte // variable to store blockchain data in
 	DB().View(func(t *bolt.Tx) error {
 		dataBucket := t.Bucket([]byte(dataBucketName))
 		data = dataBucket.Get([]byte(dataBucketKey))
 		return nil // no error here
+	})
+	return data
+}
+
+// Get an existing block from the db
+func Block(hash string) []byte {
+	var data []byte
+	DB().View(func(t *bolt.Tx) error {
+		blocksBucket := t.Bucket([]byte(blocksBucketName))
+		data = blocksBucket.Get([]byte(hash))
+		return nil
 	})
 	return data
 }

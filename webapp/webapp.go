@@ -21,8 +21,8 @@ type tempData struct {
 
 // basic handler for route
 func home(rw http.ResponseWriter, r *http.Request) {
-	chain := blockchain.GetBlockchain()
-	templates.ExecuteTemplate(rw, "home", tempData{"GPCoin Blockchain", chain.GetBlocks()})
+	data := tempData{"GPCoin Blockchain", nil}
+	templates.ExecuteTemplate(rw, "home", data)
 }
 
 func add(rw http.ResponseWriter, r *http.Request) {
@@ -32,7 +32,7 @@ func add(rw http.ResponseWriter, r *http.Request) {
 	case "POST":
 		r.ParseForm()              // form input will be passed in request
 		data := r.Form.Get("data") // get block data
-		blockchain.GetBlockchain().AddBlock(data)
+		blockchain.Blockchain().AddBlock(data)
 		// Redirect client back to homepage, where they will see new block
 		http.Redirect(rw, r, "/", http.StatusPermanentRedirect)
 	}
