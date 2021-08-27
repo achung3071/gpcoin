@@ -67,7 +67,6 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Payload:     "",
 		},
 	}
-	rw.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
 
@@ -78,7 +77,6 @@ type postBlocksBody struct {
 func blocks(rw http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		rw.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(rw).Encode(blockchain.GetBlockchain().GetBlocks())
 	case "POST":
 		var blockData postBlocksBody
@@ -98,7 +96,6 @@ func block(rw http.ResponseWriter, r *http.Request) {
 	heightStr := vars["height"]
 	height, err := strconv.Atoi(heightStr) // convert to int
 	utils.ErrorHandler(err)
-	rw.Header().Add("Content-Type", "application/json")
 	block, err := blockchain.GetBlockchain().GetBlock(height) // get block based on height
 	if err == blockchain.ErrBlockNotFound {
 		rw.WriteHeader(404)
@@ -108,9 +105,27 @@ func block(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Attach application/json to every response
+func jsonContentTypeMiddleware(next http.Handler) http.Handler {
+	/* Normally, http.Handler is an interface having the ServeHTTP function.
+	http.HandlerFunc is a TYPE that implements this interface. It defines
+	the ServeHTTP function as simply calling the function f(rw, r) passed into
+	it. Thus, it allows us to use a custom function as an http handler (i.e.,
+	use custom middleware). As a result, we do not need to define our own struct
+	and receiver function for http.Handler, and can use HandlerFunc(f) as an
+	ADAPTER which allows us to easily define a Handler using our own function.
+	(see source code for http.HandlerFunc for more info)
+	*/
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Add("Content-Type", "application/json")
+		next.ServeHTTP(rw, r)
+	})
+}
+
 func Start(portNum int) {
 	// Use mux from gorilla to specify a new multiplexer
 	router := mux.NewRouter()
+	router.Use(jsonContentTypeMiddleware)
 
 	router.HandleFunc("/", documentation).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
