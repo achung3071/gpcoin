@@ -1,19 +1,22 @@
 package blockchain
 
 import (
-	"crypto/sha256"
 	"errors"
-	"fmt"
+	"strings"
+	"time"
 
 	"github.com/achung3071/gpcoin/db"
 	"github.com/achung3071/gpcoin/utils"
 )
 
 type Block struct {
-	Data     string `json:"data"`
-	Hash     string `json:"hash"`
-	PrevHash string `json:"prevHash,omitempty"`
-	Height   int    `json:"height"`
+	Data       string `json:"data"`
+	Hash       string `json:"hash"`
+	PrevHash   string `json:"prevHash,omitempty"`
+	Height     int    `json:"height"`
+	Difficulty int    `json:"difficulty"`
+	Nonce      int    `json:"nonce"`
+	Timestamp  int    `json:"timestamp"`
 }
 
 // Save block in DB
@@ -24,6 +27,21 @@ func (b *Block) commit() {
 // Load block data into block instance
 func (b *Block) restore(data []byte) {
 	utils.FromBytes(b, data)
+}
+
+// Can only add block to blockchain when proof of work exists (finding nonce)
+func (b *Block) mine() {
+	target := strings.Repeat("0", b.Difficulty) // num. zeros hash must start with
+	for {
+		b.Timestamp = int(time.Now().Unix())
+		hash := utils.Hash(b)
+		if strings.HasPrefix(hash, target) {
+			b.Hash = hash
+			break
+		} else {
+			b.Nonce++ // increment nonce
+		}
+	}
 }
 
 var ErrBlockNotFound error = errors.New("Block with given hash not found")
@@ -40,9 +58,15 @@ func FindBlock(hash string) (*Block, error) {
 }
 
 func createBlock(data string, prevHash string, height int) *Block {
-	newBlock := &Block{data, "", prevHash, height}
-	payload := newBlock.Data + newBlock.PrevHash + fmt.Sprint(newBlock.Height)
-	newBlock.Hash = fmt.Sprintf("%x", sha256.Sum256([]byte(payload)))
+	newBlock := &Block{
+		Data:       data,
+		Hash:       "",
+		PrevHash:   prevHash,
+		Height:     height,
+		Difficulty: Blockchain().difficulty(),
+		Nonce:      0,
+	}
+	newBlock.mine() // provide PoW
 	newBlock.commit()
 	return newBlock
 }
