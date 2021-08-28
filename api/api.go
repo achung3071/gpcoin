@@ -64,6 +64,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Description: "Get a specific block",
 			Payload:     "",
 		},
+		{
+			URL:         url("/status"),
+			Method:      "GET",
+			Description: "Check status of blockchain",
+			Payload:     "",
+		},
 	}
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
@@ -101,6 +107,11 @@ func block(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Send blockchain metadata
+func status(rw http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(rw).Encode(blockchain.Blockchain())
+}
+
 // Attach application/json to every response
 func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	/* Normally, http.Handler is an interface having the ServeHTTP function.
@@ -126,6 +137,7 @@ func Start(portNum int) {
 	router.HandleFunc("/", documentation).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
 	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
+	router.HandleFunc("/status", status).Methods("GET")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)

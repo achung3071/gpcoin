@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/achung3071/gpcoin/utils"
 	"github.com/boltdb/bolt"
 )
@@ -35,7 +33,6 @@ func DB() *bolt.DB {
 }
 
 func SaveBlock(hash string, data []byte) {
-	fmt.Printf("Saving block %s.\nData: %b\n", hash, data)
 	err := DB().Update(func(t *bolt.Tx) error {
 		blocksBucket := t.Bucket([]byte(blocksBucketName))
 		err := blocksBucket.Put([]byte(hash), data) // updata db with block data
