@@ -74,20 +74,13 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
 
-type postBlocksBody struct {
-	Data string
-}
-
 func blocks(rw http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		json.NewEncoder(rw).Encode(blockchain.Blockchain().Blocks())
 	case "POST":
-		var blockData postBlocksBody
-		// save body in blockData variable (decoder automatically maps lowercase data -> Data)
-		json.NewDecoder(r.Body).Decode(&blockData)
-		blockchain.Blockchain().AddBlock(blockData.Data) // add to blockchain
-		rw.WriteHeader(http.StatusCreated)               // response 201
+		blockchain.Blockchain().AddBlock() // add to blockchain
+		rw.WriteHeader(http.StatusCreated) // response 201
 	}
 }
 

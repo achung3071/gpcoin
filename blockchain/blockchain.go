@@ -33,7 +33,7 @@ func Blockchain() *blockchain {
 			}
 			chainData := db.Blockchain()
 			if chainData == nil { // blockchain not in db
-				b.AddBlock("Genesis block")
+				b.AddBlock()
 			} else {
 				b.restore(chainData)
 			}
@@ -83,8 +83,8 @@ func (b *blockchain) commit() {
 }
 
 // Adds a new block to the blockchain & save in DB
-func (b *blockchain) AddBlock(data string) {
-	newBlock := createBlock(data, b.LastHash, b.Height+1)
+func (b *blockchain) AddBlock() {
+	newBlock := createBlock(b.LastHash, b.Height+1)
 	b.LastHash = newBlock.Hash
 	b.Height = newBlock.Height
 	// newBlock.Difficulty already updated using Blockchain().difficulty()
