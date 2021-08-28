@@ -22,8 +22,8 @@ const (
 type Tx struct {
 	Id        string   `json:"id"`
 	Timestamp int      `json:"timestamp"`
-	TxIns     []*TxIn  `json:"TxIns"`
-	TxOuts    []*TxOut `json:"TxOuts"`
+	TxIns     []*TxIn  `json:"txIns"`
+	TxOuts    []*TxOut `json:"txOuts"`
 }
 
 func (t *Tx) getId() {

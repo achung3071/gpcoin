@@ -108,3 +108,38 @@ func (b *blockchain) Blocks() []*Block {
 	}
 	return blocks
 }
+
+// Get all transaction outputs
+func (b *blockchain) txOuts() []*TxOut {
+	blocks := b.Blocks()
+	outs := []*TxOut{}
+	for _, block := range blocks {
+		for _, tx := range block.Transactions {
+			// Append all transaction outputs
+			outs = append(outs, tx.TxOuts...)
+		}
+	}
+	return outs
+}
+
+// Get all transaction outputs filtered by address
+func (b *blockchain) TxOutsByAddress(address string) []*TxOut {
+	filteredTxOuts := []*TxOut{}
+	outs := b.txOuts()
+	for _, txOut := range outs {
+		if txOut.Owner == address {
+			filteredTxOuts = append(filteredTxOuts, txOut)
+		}
+	}
+	return filteredTxOuts
+}
+
+// Get sum of all transaction outputs for an address
+func (b *blockchain) BalanceByAddress(address string) int {
+	txOuts := b.TxOutsByAddress(address)
+	balance := 0
+	for _, txOut := range txOuts {
+		balance += txOut.Amount
+	}
+	return balance
+}

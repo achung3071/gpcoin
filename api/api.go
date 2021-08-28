@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/achung3071/gpcoin/blockchain"
+	"github.com/achung3071/gpcoin/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -70,6 +71,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Description: "Check status of blockchain",
 			Payload:     "",
 		},
+		{
+			URL:         url("/balance/{address}"),
+			Method:      "GET",
+			Description: "Get transaction outputs or balance(?total=true) at address",
+			Payload:     "",
+		},
 	}
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
@@ -105,6 +112,27 @@ func status(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(blockchain.Blockchain())
 }
 
+// Response when total=true (showing total balance)
+type balanceResponse struct {
+	Address string `json:"address"`
+	Balance int    `json:"balance"`
+}
+
+// Get either TxOuts or total balance for given address/user
+func balance(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	showTotal := r.URL.Query().Get("total")
+	if showTotal == "true" {
+		// Show total balance
+		response := balanceResponse{address, blockchain.Blockchain().BalanceByAddress(address)}
+		utils.ErrorHandler(json.NewEncoder(rw).Encode(response))
+	} else {
+		// Show transaction outputs
+		utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Blockchain().TxOutsByAddress(address)))
+	}
+}
+
 // Attach application/json to every response
 func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	/* Normally, http.Handler is an interface having the ServeHTTP function.
@@ -131,6 +159,7 @@ func Start(portNum int) {
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
 	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
 	router.HandleFunc("/status", status).Methods("GET")
+	router.HandleFunc("/balance/{address}", balance).Methods("GET")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)
