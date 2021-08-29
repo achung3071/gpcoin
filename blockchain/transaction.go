@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"errors"
 	"time"
 
 	"github.com/achung3071/gpcoin/utils"
@@ -31,15 +30,23 @@ func (t *Tx) getId() {
 	t.Id = utils.Hash(t)
 }
 
-// Transaction input (how much distributing party has before transaction)
+// Transaction input (previous transaction output that is being spent)
 type TxIn struct {
+	TxId  string `json:"txId"`  // transaction which created the TxOut (spent as this input)
+	Index int    `json:"index"` // index of TxOut within transaction
+	Owner string `json:"owner"`
+}
+
+// Transaction output (how much each party involved has after transaction)
+type TxOut struct {
 	Owner  string `json:"owner"`
 	Amount int    `json:"amount"`
 }
 
-// Transaction input (how much each party involved has after transaction)
-type TxOut struct {
-	Owner  string `json:"owner"`
+// Unspent transaction output
+type UTxOut struct {
+	TxId   string `json:"txId"`
+	Index  int    `json:"index"`
 	Amount int    `json:"amount"`
 }
 
@@ -52,7 +59,7 @@ var Mempool *mempool = &mempool{}
 
 // Creates a transaction from the blockchain that gives a reward to the miner.
 func createCoinbaseTx() *Tx {
-	txIns := []*TxIn{{coinbaseAddress, minerReward}}
+	txIns := []*TxIn{{"", -1, coinbaseAddress}}
 	txOuts := []*TxOut{{minerAddress, minerReward}}
 	tx := Tx{
 		Id:        "",
@@ -66,39 +73,7 @@ func createCoinbaseTx() *Tx {
 
 // Create a new transaction from one address to anotehr
 func makeTx(from string, to string, amount int) (*Tx, error) {
-	balance := Blockchain().BalanceByAddress(from)
-	if balance < amount {
-		return nil, errors.New("not enough money to send")
-	}
-	// Make new transaction inputs from prev transaction outputs
-	oldTxOuts := Blockchain().TxOutsByAddress(from)
-	runningTotal := 0
-	txIns := []*TxIn{}
-	txOuts := []*TxOut{}
-	for _, txOut := range oldTxOuts {
-		if runningTotal >= amount {
-			break // enough transaction inputs
-		}
-		// Else, add current txOut to txIns
-		runningTotal += txOut.Amount
-		newTxIn := TxIn{from, txOut.Amount}
-		txIns = append(txIns, &newTxIn)
-	}
-	// Make transaction outputs
-	change := runningTotal - amount
-	if change > 0 { // change needs to be one of the transaction outputs
-		txOuts = append(txOuts, &TxOut{from, change})
-	}
-	txOuts = append(txOuts, &TxOut{to, amount})
-	// Make final transaction
-	tx := Tx{
-		Id:        "",
-		Timestamp: int(time.Now().Unix()),
-		TxIns:     txIns,
-		TxOuts:    txOuts,
-	}
-	tx.getId() // hash for transaction id
-	return &tx, nil
+	return nil, nil
 }
 
 // Add a transaction to a certain address on the mempool

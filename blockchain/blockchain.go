@@ -109,34 +109,43 @@ func (b *blockchain) Blocks() []*Block {
 	return blocks
 }
 
-// Get all transaction outputs
-func (b *blockchain) txOuts() []*TxOut {
-	blocks := b.Blocks()
-	outs := []*TxOut{}
-	for _, block := range blocks {
+// Get all unspent transaction outputs (i.e., still valid for use as inputs)
+// filtered by address
+func (b *blockchain) UTxOutsByAddress(address string) []*UTxOut {
+	var uTxOuts []*UTxOut                       // holds unspent TxOuts by this address
+	txsWithSpentTxOuts := make(map[string]bool) // transactions which created spent TxOuts
+	for _, block := range b.Blocks() {
 		for _, tx := range block.Transactions {
-			// Append all transaction outputs
-			outs = append(outs, tx.TxOuts...)
+			for _, txIn := range tx.TxIns {
+				// If transaction is initiated by address in question
+				if txIn.Owner == address {
+					// Earlier transaction (txIn.TxId) has an output that is now spent
+					txsWithSpentTxOuts[txIn.TxId] = true
+				}
+			}
+			for idx, txOut := range tx.TxOuts {
+				if txOut.Owner == address {
+					// Is this txOut spent (i.e., has this transaction generated a spent output)?
+					outputSpent := txsWithSpentTxOuts[tx.Id]
+					if !outputSpent { // output has yet to be spent
+						uTxOut := UTxOut{
+							TxId:   tx.Id,
+							Index:  idx,
+							Amount: txOut.Amount,
+						}
+						uTxOuts = append(uTxOuts, &uTxOut)
+					}
+					break // no other txOuts in this transaction belong to this address
+				}
+			}
 		}
 	}
-	return outs
-}
-
-// Get all transaction outputs filtered by address
-func (b *blockchain) TxOutsByAddress(address string) []*TxOut {
-	filteredTxOuts := []*TxOut{}
-	outs := b.txOuts()
-	for _, txOut := range outs {
-		if txOut.Owner == address {
-			filteredTxOuts = append(filteredTxOuts, txOut)
-		}
-	}
-	return filteredTxOuts
+	return uTxOuts
 }
 
 // Get sum of all transaction outputs for an address
 func (b *blockchain) BalanceByAddress(address string) int {
-	txOuts := b.TxOutsByAddress(address)
+	txOuts := b.UTxOutsByAddress(address)
 	balance := 0
 	for _, txOut := range txOuts {
 		balance += txOut.Amount

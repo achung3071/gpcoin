@@ -141,7 +141,7 @@ func balance(rw http.ResponseWriter, r *http.Request) {
 		utils.ErrorHandler(json.NewEncoder(rw).Encode(response))
 	} else {
 		// Show transaction outputs
-		utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Blockchain().TxOutsByAddress(address)))
+		utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Blockchain().UTxOutsByAddress(address)))
 	}
 }
 
