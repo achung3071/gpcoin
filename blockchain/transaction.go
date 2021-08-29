@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/achung3071/gpcoin/utils"
@@ -71,9 +72,39 @@ func createCoinbaseTx() *Tx {
 	return &tx
 }
 
-// Create a new transaction from one address to anotehr
+// Create a new transaction from one address to another
 func makeTx(from string, to string, amount int) (*Tx, error) {
-	return nil, nil
+	currBalance := Blockchain().BalanceByAddress(from)
+	if currBalance < amount {
+		return nil, errors.New("not enough funds to send specified amount")
+	}
+	txIns := []*TxIn{}
+	txOuts := []*TxOut{}
+	total := 0
+	uTxOuts := Blockchain().UTxOutsByAddress(from)
+	// Append transaction inputs
+	for _, uTxOut := range uTxOuts {
+		if total >= amount {
+			break // enoungh TxIns added
+		}
+		total += uTxOut.Amount
+		txIns = append(txIns, &TxIn{uTxOut.TxId, uTxOut.Index, from})
+	}
+	// Create transaction outputs
+	if change := total - amount; change > 0 {
+		// give change back as a transaction output
+		txOuts = append(txOuts, &TxOut{from, change})
+	}
+	txOuts = append(txOuts, &TxOut{to, amount})
+	// Return final transaction
+	tx := Tx{
+		Id:        "",
+		Timestamp: int(time.Now().Unix()),
+		TxIns:     txIns,
+		TxOuts:    txOuts,
+	}
+	tx.getId()
+	return &tx, nil
 }
 
 // Add a transaction to a certain address on the mempool
