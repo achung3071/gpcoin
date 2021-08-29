@@ -125,7 +125,7 @@ func (b *blockchain) UTxOutsByAddress(address string) []*UTxOut {
 			}
 			for idx, txOut := range tx.TxOuts {
 				if txOut.Owner == address {
-					// Is this txOut spent (i.e., has this transaction generated a spent output)?
+					// Is this txOut spent (i.e., has the transaction generated a spent output)?
 					outputSpent := txsWithSpentTxOuts[tx.Id]
 					if !outputSpent { // output has yet to be spent
 						uTxOut := UTxOut{
@@ -133,7 +133,10 @@ func (b *blockchain) UTxOutsByAddress(address string) []*UTxOut {
 							Index:  idx,
 							Amount: txOut.Amount,
 						}
-						uTxOuts = append(uTxOuts, &uTxOut)
+						// Ensure output is not part of a pending tx (i.e., not on mempool)
+						if !isOnMempool(uTxOut) {
+							uTxOuts = append(uTxOuts, &uTxOut)
+						}
 					}
 					break // no other txOuts in this transaction belong to this address
 				}

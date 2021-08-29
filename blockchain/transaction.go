@@ -58,6 +58,18 @@ type mempool struct {
 
 var Mempool *mempool = &mempool{}
 
+// checks if a uTxOut is on the mempool already (so it isn't passed as an input again)
+func isOnMempool(uTxOut UTxOut) bool {
+	for _, tx := range Mempool.Txs {
+		for _, txIn := range tx.TxIns {
+			if txIn.TxId == uTxOut.TxId && txIn.Index == uTxOut.Index {
+				return true // uTxOut is already being used on the mempool
+			}
+		}
+	}
+	return false
+}
+
 // Creates a transaction from the blockchain that gives a reward to the miner.
 func createCoinbaseTx() *Tx {
 	txIns := []*TxIn{{"", -1, coinbaseAddress}}
