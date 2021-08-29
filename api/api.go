@@ -77,6 +77,18 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Description: "Get transaction outputs or balance(?total=true) at address",
 			Payload:     "",
 		},
+		{
+			URL:         url("/mempool"),
+			Method:      "GET",
+			Description: "Get the current mempool",
+			Payload:     "",
+		},
+		{
+			URL:         url("/transactions"),
+			Method:      "POST",
+			Description: "Post a new transaction to the mempool",
+			Payload:     "{to: string, amount: int}",
+		},
 	}
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
@@ -133,6 +145,35 @@ func balance(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Check the current mempool
+func mempool(rw http.ResponseWriter, r *http.Request) {
+	utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Blockchain().Mempool.Txs))
+}
+
+type postTransactionsBody struct {
+	To     string `json:"to"`
+	Amount int    `json:"amount"`
+}
+
+// Add a new transaction to mempool
+func transactions(rw http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		var data postTransactionsBody
+		json.NewDecoder(r.Body).Decode(&data) // get data
+		// Add the new transaction to the blockchain mempool
+		err := blockchain.Blockchain().Mempool.AddTx(data.To, data.Amount)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(rw).Encode(errResponse{err.Error()})
+			return
+		}
+		rw.WriteHeader(http.StatusCreated) // successfully created transaction
+	default:
+		return
+	}
+}
+
 // Attach application/json to every response
 func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	/* Normally, http.Handler is an interface having the ServeHTTP function.
@@ -160,6 +201,8 @@ func Start(portNum int) {
 	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
 	router.HandleFunc("/status", status).Methods("GET")
 	router.HandleFunc("/balance/{address}", balance).Methods("GET")
+	router.HandleFunc("/mempool", mempool).Methods("GET")
+	router.HandleFunc("/transactions", transactions).Methods("POST")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)

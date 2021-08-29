@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/achung3071/gpcoin/utils"
@@ -42,6 +43,11 @@ type TxOut struct {
 	Amount int    `json:"amount"`
 }
 
+// Mempool is where unconfirmed transactions are (before added to a block)
+type Mempool struct {
+	Txs []*Tx `json:"txs"`
+}
+
 // Creates a transaction from the blockchain that gives a reward to the miner.
 func createCoinbaseTx() *Tx {
 	txIns := []*TxIn{{coinbaseAddress, minerReward}}
@@ -54,4 +60,51 @@ func createCoinbaseTx() *Tx {
 	}
 	tx.getId() // attach an ID to the given transaction via hashing
 	return &tx
+}
+
+// Create a new transaction from one address to anotehr
+func makeTx(from string, to string, amount int) (*Tx, error) {
+	balance := Blockchain().BalanceByAddress(from)
+	if balance < amount {
+		return nil, errors.New("not enough money to send")
+	}
+	// Make new transaction inputs from prev transaction outputs
+	oldTxOuts := Blockchain().TxOutsByAddress(from)
+	runningTotal := 0
+	txIns := []*TxIn{}
+	txOuts := []*TxOut{}
+	for _, txOut := range oldTxOuts {
+		if runningTotal >= amount {
+			break // enough transaction inputs
+		}
+		// Else, add current txOut to txIns
+		runningTotal += txOut.Amount
+		newTxIn := TxIn{from, txOut.Amount}
+		txIns = append(txIns, &newTxIn)
+	}
+	// Make transaction outputs
+	change := runningTotal - amount
+	if change > 0 { // change needs to be one of the transaction outputs
+		txOuts = append(txOuts, &TxOut{from, change})
+	}
+	txOuts = append(txOuts, &TxOut{to, amount})
+	// Make final transaction
+	tx := Tx{
+		Id:        "",
+		Timestamp: int(time.Now().Unix()),
+		TxIns:     txIns,
+		TxOuts:    txOuts,
+	}
+	tx.getId() // hash for transaction id
+	return &tx, nil
+}
+
+// Add a transaction to a certain address on the mempool
+func (m *Mempool) AddTx(to string, amount int) error {
+	tx, err := makeTx(minerAddress, to, amount)
+	if err != nil {
+		return err
+	}
+	m.Txs = append(m.Txs, tx)
+	return nil
 }
