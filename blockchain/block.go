@@ -29,13 +29,13 @@ func commitBlock(b *Block) {
 }
 
 // Create a new block (mine and add mempool transactions)
-func createBlock(b *blockchain) *Block {
+func createBlock(prevHash string, height int, diff int) *Block {
 	// Initialize every new block added to chain w/ a coinbase transaction
 	newBlock := &Block{
 		Hash:       "",
-		PrevHash:   b.LastHash,
-		Height:     b.Height + 1,
-		Difficulty: difficulty(b),
+		PrevHash:   prevHash,
+		Height:     height,
+		Difficulty: diff,
 		Nonce:      0,
 	}
 	newBlock.mine() // provide PoW

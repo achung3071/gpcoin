@@ -76,7 +76,7 @@ func commitBlockchain(b *blockchain) {
 }
 
 // Get difficulty of blockchain (i.e., how many 0s need to be in front of block hash)
-func difficulty(b *blockchain) int {
+func getDifficulty(b *blockchain) int {
 	if b.Height == 0 {
 		// no blocks yet
 		return defaultDifficulty
@@ -151,7 +151,7 @@ func (b *blockchain) restore(data []byte) {
 
 // Adds a new block to the blockchain & save in DB
 func (b *blockchain) AddBlock() {
-	newBlock := createBlock(b)
+	newBlock := createBlock(b.LastHash, b.Height+1, getDifficulty(b))
 	b.LastHash = newBlock.Hash
 	b.Height = newBlock.Height
 	// newBlock.Difficulty already updated using Blockchain().difficulty()
