@@ -26,20 +26,20 @@ var once sync.Once
 // NON-MUTATING FUNCTIONS
 // Only function that should be used to access the blockchain (b).
 func Blockchain() *blockchain {
-	if b == nil {
-		// Singleton pattern w/ sync.Once (prevent concurrent creation of multiple blockchains)
-		once.Do(func() {
-			b = &blockchain{
-				Height: 0,
-			}
-			chainData := db.Blockchain()
-			if chainData == nil { // blockchain not in db
-				b.AddBlock()
-			} else {
-				b.restore(chainData)
-			}
-		})
-	}
+	// Singleton pattern w/ sync.Once (prevent concurrent creation of multiple blockchains)
+	once.Do(func() {
+		b = &blockchain{
+			Height: 0,
+		}
+		chainData := db.Blockchain()
+		if chainData == nil { // blockchain not in db
+			// ensure AddBlock() does not call Blockchain() again,
+			// or else it will result in a deadlock (circularity)
+			b.AddBlock()
+		} else {
+			b.restore(chainData)
+		}
+	})
 	return b
 }
 
@@ -151,7 +151,7 @@ func (b *blockchain) restore(data []byte) {
 
 // Adds a new block to the blockchain & save in DB
 func (b *blockchain) AddBlock() {
-	newBlock := createBlock(b.LastHash, b.Height+1)
+	newBlock := createBlock(b)
 	b.LastHash = newBlock.Hash
 	b.Height = newBlock.Height
 	// newBlock.Difficulty already updated using Blockchain().difficulty()
