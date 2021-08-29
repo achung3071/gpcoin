@@ -23,6 +23,7 @@ type blockchain struct {
 var b *blockchain // Holds singleton instance of blockchain
 var once sync.Once
 
+// NON-MUTATING FUNCTIONS
 // Only function that should be used to access the blockchain (b).
 func Blockchain() *blockchain {
 	if b == nil {
@@ -42,58 +43,18 @@ func Blockchain() *blockchain {
 	return b
 }
 
-// Calculates difficulty based on whether time taken to create x (5) blocks is
-// too long (> 12 mins) or too short (< 8 mins)
-func (b *blockchain) recalculateDifficulty() int {
-	blocks := b.Blocks()
-	newestBlock := blocks[0]
-	lastUpdatedBlock := blocks[updateIntervalInBlocks-1]
-	// convert from seconds -> minutes
-	timeSinceLastUpdate := (newestBlock.Timestamp - lastUpdatedBlock.Timestamp) / 60
-	expectedTime := updateIntervalInBlocks * expectedMinsPerBlock
-	if timeSinceLastUpdate < expectedTime-updateWindowInMins {
-		return b.CurrDifficulty + 1 // increase difficulty
-	} else if timeSinceLastUpdate > expectedTime+updateWindowInMins {
-		return b.CurrDifficulty - 1 // lower difficulty
-	} else {
-		return b.CurrDifficulty
+// Get sum of all transaction outputs for an address
+func BalanceByAddress(address string, b *blockchain) int {
+	txOuts := UTxOutsByAddress(address, b)
+	balance := 0
+	for _, txOut := range txOuts {
+		balance += txOut.Amount
 	}
-}
-
-// Get difficulty of blockchain (i.e., how many 0s need to be in front of block hash)
-func (b *blockchain) difficulty() int {
-	if b.Height == 0 {
-		// no blocks yet
-		return defaultDifficulty
-	} else if b.Height%5 == 0 {
-		// Time to recalculate & update difficulty!
-		return b.recalculateDifficulty()
-	} else {
-		// 5 blocks not added since last update, so don't update
-		return b.CurrDifficulty
-	}
-}
-
-func (b *blockchain) restore(data []byte) {
-	utils.FromBytes(b, data)
-}
-
-func (b *blockchain) commit() {
-	db.SaveBlockchain(utils.ToBytes(b))
-}
-
-// Adds a new block to the blockchain & save in DB
-func (b *blockchain) AddBlock() {
-	newBlock := createBlock(b.LastHash, b.Height+1)
-	b.LastHash = newBlock.Hash
-	b.Height = newBlock.Height
-	// newBlock.Difficulty already updated using Blockchain().difficulty()
-	b.CurrDifficulty = newBlock.Difficulty
-	b.commit()
+	return balance
 }
 
 // Get all blocks
-func (b *blockchain) Blocks() []*Block {
+func Blocks(b *blockchain) []*Block {
 	var blocks []*Block
 	currHash := b.LastHash
 	for {
@@ -109,12 +70,48 @@ func (b *blockchain) Blocks() []*Block {
 	return blocks
 }
 
-// Get all unspent transaction outputs (i.e., still valid for use as inputs)
-// filtered by address
-func (b *blockchain) UTxOutsByAddress(address string) []*UTxOut {
+// Save blockchain to DB
+func commitBlockchain(b *blockchain) {
+	db.SaveBlockchain(utils.ToBytes(b))
+}
+
+// Get difficulty of blockchain (i.e., how many 0s need to be in front of block hash)
+func difficulty(b *blockchain) int {
+	if b.Height == 0 {
+		// no blocks yet
+		return defaultDifficulty
+	} else if b.Height%5 == 0 {
+		// Time to recalculate & update difficulty!
+		return recalculateDifficulty(b)
+	} else {
+		// 5 blocks not added since last update, so don't update
+		return b.CurrDifficulty
+	}
+}
+
+// Calculates difficulty based on whether time taken to create 5 blocks is
+// too long (> 12 mins) or too short (< 8 mins)
+func recalculateDifficulty(b *blockchain) int {
+	blocks := Blocks(b)
+	newestBlock := blocks[0]
+	lastUpdatedBlock := blocks[updateIntervalInBlocks-1]
+	// convert from seconds -> minutes
+	timeSinceLastUpdate := (newestBlock.Timestamp - lastUpdatedBlock.Timestamp) / 60
+	expectedTime := updateIntervalInBlocks * expectedMinsPerBlock
+	if timeSinceLastUpdate < expectedTime-updateWindowInMins {
+		return b.CurrDifficulty + 1 // increase difficulty
+	} else if timeSinceLastUpdate > expectedTime+updateWindowInMins {
+		return b.CurrDifficulty - 1 // lower difficulty
+	} else {
+		return b.CurrDifficulty
+	}
+}
+
+// Get unspent transaction outputs (i.e., still valid for use as inputs) filtered by address
+func UTxOutsByAddress(address string, b *blockchain) []*UTxOut {
 	var uTxOuts []*UTxOut                       // holds unspent TxOuts by this address
 	txsWithSpentTxOuts := make(map[string]bool) // transactions which created spent TxOuts
-	for _, block := range b.Blocks() {
+	for _, block := range Blocks(b) {
 		for _, tx := range block.Transactions {
 			for _, txIn := range tx.TxIns {
 				// If transaction is initiated by address in question
@@ -146,12 +143,18 @@ func (b *blockchain) UTxOutsByAddress(address string) []*UTxOut {
 	return uTxOuts
 }
 
-// Get sum of all transaction outputs for an address
-func (b *blockchain) BalanceByAddress(address string) int {
-	txOuts := b.UTxOutsByAddress(address)
-	balance := 0
-	for _, txOut := range txOuts {
-		balance += txOut.Amount
-	}
-	return balance
+// MUTATING FUNCTIONS
+// Load existing data into blockchain variable
+func (b *blockchain) restore(data []byte) {
+	utils.FromBytes(b, data)
+}
+
+// Adds a new block to the blockchain & save in DB
+func (b *blockchain) AddBlock() {
+	newBlock := createBlock(b.LastHash, b.Height+1)
+	b.LastHash = newBlock.Hash
+	b.Height = newBlock.Height
+	// newBlock.Difficulty already updated using Blockchain().difficulty()
+	b.CurrDifficulty = newBlock.Difficulty
+	commitBlockchain(b)
 }

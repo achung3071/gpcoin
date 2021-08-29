@@ -27,10 +27,6 @@ type Tx struct {
 	TxOuts    []*TxOut `json:"txOuts"`
 }
 
-func (t *Tx) getId() {
-	t.Id = utils.Hash(t)
-}
-
 // Transaction input (previous transaction output that is being spent)
 type TxIn struct {
 	TxId  string `json:"txId"`  // transaction which created the TxOut (spent as this input)
@@ -58,19 +54,8 @@ type mempool struct {
 
 var Mempool *mempool = &mempool{}
 
-// checks if a uTxOut is on the mempool already (so it isn't passed as an input again)
-func isOnMempool(uTxOut UTxOut) bool {
-	for _, tx := range Mempool.Txs {
-		for _, txIn := range tx.TxIns {
-			if txIn.TxId == uTxOut.TxId && txIn.Index == uTxOut.Index {
-				return true // uTxOut is already being used on the mempool
-			}
-		}
-	}
-	return false
-}
-
-// Creates a transaction from the blockchain that gives a reward to the miner.
+// NON-MUTATING FUNCTIONS
+// Creates a transaction from the blockchain that gives a reward to the miner
 func createCoinbaseTx() *Tx {
 	txIns := []*TxIn{{"", -1, coinbaseAddress}}
 	txOuts := []*TxOut{{minerAddress, minerReward}}
@@ -84,16 +69,31 @@ func createCoinbaseTx() *Tx {
 	return &tx
 }
 
+// Checks if a uTxOut is on the mempool already (so it isn't passed as an input again)
+func isOnMempool(uTxOut UTxOut) bool {
+	exists := false
+Outer:
+	for _, tx := range Mempool.Txs {
+		for _, txIn := range tx.TxIns {
+			if txIn.TxId == uTxOut.TxId && txIn.Index == uTxOut.Index {
+				exists = true // uTxOut is already being used on the mempool
+				break Outer   // using labels, break from outer for loop
+			}
+		}
+	}
+	return exists
+}
+
 // Create a new transaction from one address to another
 func makeTx(from string, to string, amount int) (*Tx, error) {
-	currBalance := Blockchain().BalanceByAddress(from)
+	currBalance := BalanceByAddress(from, Blockchain())
 	if currBalance < amount {
 		return nil, errors.New("not enough funds to send specified amount")
 	}
 	txIns := []*TxIn{}
 	txOuts := []*TxOut{}
 	total := 0
-	uTxOuts := Blockchain().UTxOutsByAddress(from)
+	uTxOuts := UTxOutsByAddress(from, Blockchain())
 	// Append transaction inputs
 	for _, uTxOut := range uTxOuts {
 		if total >= amount {
@@ -119,6 +119,12 @@ func makeTx(from string, to string, amount int) (*Tx, error) {
 	return &tx, nil
 }
 
+// MUTATING FUNCTIONS
+// Populates id field of a transaction
+func (t *Tx) getId() {
+	t.Id = utils.Hash(t)
+}
+
 // Add a transaction to a certain address on the mempool
 func (m *mempool) AddTx(to string, amount int) error {
 	tx, err := makeTx(minerAddress, to, amount)
@@ -129,7 +135,7 @@ func (m *mempool) AddTx(to string, amount int) error {
 	return nil
 }
 
-// empties mempool and returns now-confirmed transactions
+// Empties mempool and returns now-confirmed transactions
 func (m *mempool) ConfirmTxs() []*Tx {
 	// reward for mining new block & confirming transactions
 	coinbaseTx := createCoinbaseTx()
