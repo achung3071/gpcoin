@@ -56,8 +56,8 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 		{
 			URL:         url("/blocks"),
 			Method:      "POST",
-			Description: "Add a block",
-			Payload:     "{data: string}",
+			Description: "Mine a block and add to blockchain",
+			Payload:     "",
 		},
 		{
 			URL:         url("/blocks/{hash}"),
@@ -147,7 +147,7 @@ func balance(rw http.ResponseWriter, r *http.Request) {
 
 // Check the current mempool
 func mempool(rw http.ResponseWriter, r *http.Request) {
-	utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Blockchain().Mempool.Txs))
+	utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Mempool.Txs))
 }
 
 type postTransactionsBody struct {
@@ -162,7 +162,7 @@ func transactions(rw http.ResponseWriter, r *http.Request) {
 		var data postTransactionsBody
 		json.NewDecoder(r.Body).Decode(&data) // get data
 		// Add the new transaction to the blockchain mempool
-		err := blockchain.Blockchain().Mempool.AddTx(data.To, data.Amount)
+		err := blockchain.Mempool.AddTx(data.To, data.Amount)
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(rw).Encode(errResponse{err.Error()})

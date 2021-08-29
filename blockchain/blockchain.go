@@ -18,7 +18,6 @@ type blockchain struct {
 	LastHash       string
 	Height         int
 	CurrDifficulty int
-	Mempool        Mempool
 }
 
 var b *blockchain // Holds singleton instance of blockchain

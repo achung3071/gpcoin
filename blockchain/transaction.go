@@ -44,9 +44,11 @@ type TxOut struct {
 }
 
 // Mempool is where unconfirmed transactions are (before added to a block)
-type Mempool struct {
+type mempool struct {
 	Txs []*Tx `json:"txs"`
 }
+
+var Mempool *mempool = &mempool{}
 
 // Creates a transaction from the blockchain that gives a reward to the miner.
 func createCoinbaseTx() *Tx {
@@ -100,11 +102,21 @@ func makeTx(from string, to string, amount int) (*Tx, error) {
 }
 
 // Add a transaction to a certain address on the mempool
-func (m *Mempool) AddTx(to string, amount int) error {
+func (m *mempool) AddTx(to string, amount int) error {
 	tx, err := makeTx(minerAddress, to, amount)
 	if err != nil {
 		return err
 	}
 	m.Txs = append(m.Txs, tx)
 	return nil
+}
+
+// empties mempool and returns now-confirmed transactions
+func (m *mempool) ConfirmTxs() []*Tx {
+	// reward for mining new block & confirming transactions
+	coinbaseTx := createCoinbaseTx()
+	txs := m.Txs
+	txs = append(txs, coinbaseTx)
+	m.Txs = []*Tx{} // empty mempool
+	return txs
 }

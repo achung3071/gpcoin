@@ -62,14 +62,15 @@ func FindBlock(hash string) (*Block, error) {
 func createBlock(prevHash string, height int) *Block {
 	// Initialize every new block added to chain w/ a coinbase transaction
 	newBlock := &Block{
-		Hash:         "",
-		PrevHash:     prevHash,
-		Height:       height,
-		Difficulty:   Blockchain().difficulty(),
-		Nonce:        0,
-		Transactions: []*Tx{createCoinbaseTx()},
+		Hash:       "",
+		PrevHash:   prevHash,
+		Height:     height,
+		Difficulty: Blockchain().difficulty(),
+		Nonce:      0,
 	}
 	newBlock.mine() // provide PoW
+	// flush mempool and get confirmed transactions
+	newBlock.Transactions = Mempool.ConfirmTxs()
 	newBlock.commit()
 	return newBlock
 }
