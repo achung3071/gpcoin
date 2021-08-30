@@ -8,6 +8,7 @@ import (
 
 	"github.com/achung3071/gpcoin/blockchain"
 	"github.com/achung3071/gpcoin/utils"
+	"github.com/achung3071/gpcoin/wallet"
 	"github.com/gorilla/mux"
 )
 
@@ -88,6 +89,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Method:      "POST",
 			Description: "Post a new transaction to the mempool",
 			Payload:     "{to: string, amount: int}",
+		},
+		{
+			URL:         url("/wallet-address"),
+			Method:      "GET",
+			Description: "Get address of wallet used to post transactions",
+			Payload:     "",
 		},
 	}
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
@@ -174,6 +181,14 @@ func transactions(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Returns address of wallet
+func walletAddress(rw http.ResponseWriter, r *http.Request) {
+	address := wallet.Wallet().Address
+	json.NewEncoder(rw).Encode(struct {
+		Address string `json:"address"`
+	}{Address: address})
+}
+
 // Attach application/json to every response
 func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	/* Normally, http.Handler is an interface having the ServeHTTP function.
@@ -203,6 +218,7 @@ func Start(portNum int) {
 	router.HandleFunc("/balance/{address}", balance).Methods("GET")
 	router.HandleFunc("/mempool", mempool).Methods("GET")
 	router.HandleFunc("/transactions", transactions).Methods("POST")
+	router.HandleFunc("/wallet-address", walletAddress).Methods("GET")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)

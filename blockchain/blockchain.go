@@ -89,6 +89,17 @@ func getDifficulty(b *blockchain) int {
 	}
 }
 
+// Find a particular transaction in the blockchain
+func FindTx(b *blockchain, txId string) *Tx {
+	txs := Txs(b)
+	for _, tx := range txs {
+		if tx.Id == txId {
+			return tx
+		}
+	}
+	return nil
+}
+
 // Calculates difficulty based on whether time taken to create 5 blocks is
 // too long (> 12 mins) or too short (< 8 mins)
 func recalculateDifficulty(b *blockchain) int {
@@ -107,6 +118,15 @@ func recalculateDifficulty(b *blockchain) int {
 	}
 }
 
+// Get all transactions in blockchain
+func Txs(b *blockchain) []*Tx {
+	txs := []*Tx{}
+	for _, block := range Blocks(b) {
+		txs = append(txs, block.Transactions...)
+	}
+	return txs
+}
+
 // Get unspent transaction outputs (i.e., still valid for use as inputs) filtered by address
 func UTxOutsByAddress(address string, b *blockchain) []*UTxOut {
 	var uTxOuts []*UTxOut                       // holds unspent TxOuts by this address
@@ -114,14 +134,17 @@ func UTxOutsByAddress(address string, b *blockchain) []*UTxOut {
 	for _, block := range Blocks(b) {
 		for _, tx := range block.Transactions {
 			for _, txIn := range tx.TxIns {
+				if txIn.Signature == "COINBASE" {
+					break // no need to look for previous txOut, just skip
+				}
 				// If transaction is initiated by address in question
-				if txIn.Owner == address {
+				if FindTx(Blockchain(), txIn.TxId).TxOuts[txIn.Index].Address == address {
 					// Earlier transaction (txIn.TxId) has an output that is now spent
 					txsWithSpentTxOuts[txIn.TxId] = true
 				}
 			}
 			for idx, txOut := range tx.TxOuts {
-				if txOut.Owner == address {
+				if txOut.Address == address {
 					// Is this txOut spent (i.e., has the transaction generated a spent output)?
 					outputSpent := txsWithSpentTxOuts[tx.Id]
 					if !outputSpent { // output has yet to be spent
@@ -144,11 +167,6 @@ func UTxOutsByAddress(address string, b *blockchain) []*UTxOut {
 }
 
 // MUTATING FUNCTIONS
-// Load existing data into blockchain variable
-func (b *blockchain) restore(data []byte) {
-	utils.FromBytes(b, data)
-}
-
 // Adds a new block to the blockchain & save in DB
 func (b *blockchain) AddBlock() {
 	newBlock := createBlock(b.LastHash, b.Height+1, getDifficulty(b))
@@ -157,4 +175,9 @@ func (b *blockchain) AddBlock() {
 	// newBlock.Difficulty already updated using Blockchain().difficulty()
 	b.CurrDifficulty = newBlock.Difficulty
 	commitBlockchain(b)
+}
+
+// Load existing data into blockchain variable
+func (b *blockchain) restore(data []byte) {
+	utils.FromBytes(b, data)
 }

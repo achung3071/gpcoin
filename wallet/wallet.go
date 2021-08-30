@@ -101,7 +101,7 @@ func restoreKey() *ecdsa.PrivateKey {
 	return key
 }
 
-// Sign a given hash using wallet's private key
+// Sign a hash (i.e., a new transaction id) using wallet's private key
 func Sign(hash string, w *wallet) string {
 	hashBytes, err := hex.DecodeString(hash)
 	utils.ErrorHandler(err)
@@ -110,9 +110,7 @@ func Sign(hash string, w *wallet) string {
 	return encodeBigInts(r.Bytes(), s.Bytes())
 }
 
-// Verify a hash has been signed by the private key associated w/ address
-// (note: we provide address instead of wallet b/c verification should
-// be possible without the wallet/private key)
+// Verify a hash (transaction) has been signed by the private key (wallet) associated w/ address
 func Verify(hash, signature, address string) bool {
 	hashBytes, err := hex.DecodeString(hash)
 	utils.ErrorHandler(err)
