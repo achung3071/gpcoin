@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/achung3071/gpcoin/utils"
+	"github.com/achung3071/gpcoin/wallet"
 )
 
 // Basics of a transaction:
@@ -15,7 +16,6 @@ import (
 
 const (
 	coinbaseAddress string = "COINBASE"
-	minerAddress    string = "andrew"
 	minerReward     int    = 50
 )
 
@@ -58,7 +58,7 @@ var Mempool *mempool = &mempool{}
 // Creates a transaction from the blockchain that gives a reward to the miner
 func createCoinbaseTx() *Tx {
 	txIns := []*TxIn{{"", -1, coinbaseAddress}}
-	txOuts := []*TxOut{{minerAddress, minerReward}}
+	txOuts := []*TxOut{{wallet.Wallet().Address, minerReward}}
 	tx := Tx{
 		Id:        "",
 		Timestamp: int(time.Now().Unix()),
@@ -127,7 +127,7 @@ func (t *Tx) getId() {
 
 // Add a transaction to a certain address on the mempool
 func (m *mempool) AddTx(to string, amount int) error {
-	tx, err := makeTx(minerAddress, to, amount)
+	tx, err := makeTx(wallet.Wallet().Address, to, amount)
 	if err != nil {
 		return err
 	}

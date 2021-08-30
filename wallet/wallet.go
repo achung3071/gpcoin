@@ -2,18 +2,13 @@ package wallet
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
-	"encoding/hex"
 	"fmt"
-	"math/big"
+	"os"
 
 	"github.com/achung3071/gpcoin/utils"
-)
-
-const (
-	privateKey string = "307702010104208204ea0102e28a6c245e4e1b511cb6440f8688f239115cc41b0053e993eeec93a00a06082a8648ce3d030107a1440342000491014d888c86de295e9b3eb1c4ef03f18240a0dcc184ea1f596e80bb92448c8e3f686a22328da52afda498a5e89179e4774887033bea830268ea74078cba9924"
-	hashedMsg  string = "cb13313fb0d834900302ebee6fe7e4cc0ee48d568969549700a526e44a4f27e9"
-	signature  string = "1d9cb6868e124052ae2e95687c2cc6dc88f95fde10b4d1d28a995b69f155e00254f099dc0afc6629329e2dc7bd821d11986b53f1c5b28c2ffd7d694b6d4098ae"
 )
 
 // How signature verification works:
@@ -22,27 +17,73 @@ const (
 // 3. To verify the signature was created by a specific private key,
 //    add the (hash + signature + public key) to get a true/false value
 
-func Start() {
-	// Get private key from hex string
-	privKeyBytes, err := hex.DecodeString(privateKey)
-	utils.ErrorHandler(err)
-	privateKey, err := x509.ParseECPrivateKey(privKeyBytes)
-	utils.ErrorHandler(err)
+const (
+	walletFileName string = "gpcoin.wallet"
+)
 
-	// Get r and s (signature) from hex string
-	sigBytes, err := hex.DecodeString(signature)
-	utils.ErrorHandler(err)
-	rBytes, sBytes := sigBytes[:len(sigBytes)/2], sigBytes[len(sigBytes)/2:]
-	var r, s big.Int
-	r.SetBytes(rBytes)
-	s.SetBytes(sBytes)
+// Note that the wallet address is actualy the public key associated with
+// the private key (which people can use to verify that you signed transactions)
+type wallet struct {
+	privateKey *ecdsa.PrivateKey
+	Address    string
+}
 
-	// Get bytes of hash
-	hashBytes, err := hex.DecodeString(hashedMsg)
-	utils.ErrorHandler(err)
+var w *wallet
 
-	// If private key used to sign hash to get signature, prints true.
-	// Otherwise, prints false.
-	ok := ecdsa.Verify(&privateKey.PublicKey, hashBytes, &r, &s)
-	fmt.Println(ok)
+// NON-MUTATING FUNCTIONS
+// Access singleton instance of wallet
+func Wallet() *wallet {
+	if w == nil {
+		w = &wallet{}
+		if walletFileExists() {
+			// yes -> load existing wallet
+			w.privateKey = restoreKey()
+		} else {
+			// no -> create new wallet file
+			w.privateKey = createPrivateKey()
+			commitWallet(w)
+		}
+		w.Address = keyToAddress(w.privateKey)
+	}
+	return w
+}
+
+// Get address (public key) from private key
+func keyToAddress(k *ecdsa.PrivateKey) string {
+	// Note that since PublicKey is an embedded struct in PrivateKey,
+	// all its fields (X and Y) are "promoted" to PrivateKey, making
+	// them directly accessible.
+	publicKeyBytes := append(k.X.Bytes(), k.Y.Bytes()...)
+	return fmt.Sprintf("%x", publicKeyBytes)
+}
+
+// Save wallet with private key & read-write permissions
+func commitWallet(w *wallet) {
+	privKeyBytes, err := x509.MarshalECPrivateKey(w.privateKey)
+	utils.ErrorHandler(err)
+	err = os.WriteFile(walletFileName, privKeyBytes, 0644)
+	utils.ErrorHandler(err)
+}
+
+// Creates a new private key
+func createPrivateKey() *ecdsa.PrivateKey {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	utils.ErrorHandler(err)
+	return privateKey
+}
+
+// Restore a private key from a wallet file
+func restoreKey() *ecdsa.PrivateKey {
+	keyAsBytes, err := os.ReadFile(walletFileName)
+	utils.ErrorHandler(err)
+	key, err := x509.ParseECPrivateKey(keyAsBytes)
+	utils.ErrorHandler(err)
+	return key
+}
+
+// Check if a wallet file exists
+func walletFileExists() bool {
+	_, err := os.Stat(walletFileName)
+	exists := !os.IsNotExist(err) // check if error caused by nonexistent file
+	return exists
 }
