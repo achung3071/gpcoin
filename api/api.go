@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/achung3071/gpcoin/blockchain"
+	"github.com/achung3071/gpcoin/p2p"
 	"github.com/achung3071/gpcoin/utils"
 	"github.com/achung3071/gpcoin/wallet"
 	"github.com/gorilla/mux"
@@ -94,6 +95,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			URL:         url("/wallet-address"),
 			Method:      "GET",
 			Description: "Get address of wallet used to post transactions",
+			Payload:     "",
+		},
+		{
+			URL:         url("/ws"),
+			Method:      "GET",
+			Description: "Upgrade to websocket connection",
 			Payload:     "",
 		},
 	}
@@ -206,10 +213,18 @@ func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// Log endpoint each request is sent to
+func loggerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		fmt.Printf("Request URL: %s\n", r.RequestURI)
+		next.ServeHTTP(rw, r)
+	})
+}
+
 func Start(portNum int) {
 	// Use mux from gorilla to specify a new multiplexer
 	router := mux.NewRouter()
-	router.Use(jsonContentTypeMiddleware)
+	router.Use(jsonContentTypeMiddleware, loggerMiddleware)
 
 	router.HandleFunc("/", documentation).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
@@ -219,6 +234,7 @@ func Start(portNum int) {
 	router.HandleFunc("/mempool", mempool).Methods("GET")
 	router.HandleFunc("/transactions", transactions).Methods("POST")
 	router.HandleFunc("/wallet-address", walletAddress).Methods("GET")
+	router.HandleFunc("/ws", p2p.Upgrade).Methods("GET")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)
