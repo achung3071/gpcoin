@@ -103,6 +103,12 @@ func documentation(rw http.ResponseWriter, r *http.Request) {
 			Description: "Upgrade to websocket connection",
 			Payload:     "",
 		},
+		{
+			URL:         url("/peers"),
+			Method:      "POST",
+			Description: "Add a peer via websocket connection",
+			Payload:     "{address: string, port: string}",
+		},
 	}
 	json.NewEncoder(rw).Encode(urls) // easy way to send json to writer
 }
@@ -196,6 +202,27 @@ func walletAddress(rw http.ResponseWriter, r *http.Request) {
 	}{Address: address})
 }
 
+type postPeersBody struct {
+	Address string `json:"address"`
+	Port    string `json:"port"`
+}
+
+// Add a new peer via websocket connection
+func peers(rw http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		json.NewEncoder(rw).Encode(p2p.Peers)
+	case "POST":
+		var data postPeersBody
+		err := json.NewDecoder(r.Body).Decode(&data)
+		utils.ErrorHandler(err)
+		p2p.AddPeer(data.Address, data.Port)
+		rw.WriteHeader(http.StatusCreated)
+	default:
+		rw.WriteHeader(http.StatusBadRequest)
+	}
+}
+
 // Attach application/json to every response
 func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 	/* Normally, http.Handler is an interface having the ServeHTTP function.
@@ -235,6 +262,7 @@ func Start(portNum int) {
 	router.HandleFunc("/transactions", transactions).Methods("POST")
 	router.HandleFunc("/wallet-address", walletAddress).Methods("GET")
 	router.HandleFunc("/ws", p2p.Upgrade).Methods("GET")
+	router.HandleFunc("/peers", peers).Methods("GET", "POST")
 
 	port = fmt.Sprintf(":%d", portNum)
 	fmt.Printf("Listening on http://localhost%s\n", port)
