@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/achung3071/gpcoin/utils"
 	"github.com/gorilla/websocket"
@@ -18,13 +19,16 @@ func Upgrade(rw http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	conn, err := upgrader.Upgrade(rw, r, nil) // return ws connection
 	utils.ErrorHandler(err)
-	initPeer(conn, "xx", "xx") // TODO: change to use address/port of request
+	// Get ip address (port in r.RemoteAddr is not the open port, so no use)
+	originIp := strings.Split(r.RemoteAddr, ":")[0]
+	openPort := r.URL.Query().Get("openPort")
+	initPeer(conn, originIp, openPort)
 }
 
 // Add a peer (initiate a websocket connection with another node)
 // (e.g., :5000 requests a websocket upgrade to :4000)
-func AddPeer(address, port string) {
-	url := fmt.Sprintf("ws://%s:%s/ws", address, port)
+func AddPeer(address, port, myPort string) {
+	url := fmt.Sprintf("ws://%s:%s/ws?openPort=%s", address, port, myPort)
 	// Request a websocket upgrade from the other node
 	// (2nd argument (nil) is request header, usually w/ credentials/cookies)
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
