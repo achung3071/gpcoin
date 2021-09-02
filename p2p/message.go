@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/achung3071/gpcoin/blockchain"
 	"github.com/achung3071/gpcoin/utils"
@@ -31,6 +32,7 @@ func makeMessage(msgType MessageType, payload interface{}) []byte {
 func handleMessage(m *Message, p *peer) {
 	switch m.Type {
 	case MessageNewestBlock:
+		fmt.Printf("Received newest block from %s.\n", p.key)
 		var payload blockchain.Block
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
 		latestBlock, err := blockchain.FindBlock(blockchain.Blockchain().LastHash)
@@ -41,8 +43,10 @@ func handleMessage(m *Message, p *peer) {
 			sendNewestBlock(p)
 		}
 	case MessageAllBlocksRequest:
+		fmt.Printf("Received a request for all blocks from %s.\n", p.key)
 		sendAllBlocks(p)
 	case MessageAllBlocksResponse:
+		fmt.Printf("Received all blocks from the blockchain of %s.\n", p.key)
 		var payload []*blockchain.Block
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
 	}
@@ -51,6 +55,7 @@ func handleMessage(m *Message, p *peer) {
 
 // Send all blocks to peer
 func sendAllBlocks(p *peer) {
+	fmt.Printf("Sending %s all blocks in our blockchain...\n", p.key)
 	blocks := blockchain.Blocks(blockchain.Blockchain())
 	msgJson := makeMessage(MessageAllBlocksResponse, blocks)
 	p.inbox <- msgJson
@@ -58,6 +63,7 @@ func sendAllBlocks(p *peer) {
 
 // Send newest block to the peer
 func sendNewestBlock(p *peer) {
+	fmt.Printf("Sending %s the newest block in our blockchain...\n", p.key)
 	newestBlock, err := blockchain.FindBlock(blockchain.Blockchain().LastHash)
 	utils.ErrorHandler(err)
 	msgJson := makeMessage(MessageNewestBlock, newestBlock)
@@ -66,6 +72,7 @@ func sendNewestBlock(p *peer) {
 
 // Request all blocks from peer
 func requestAllBlocks(p *peer) {
+	fmt.Printf("Requesting %s for all blocks...\n", p.key)
 	msgJson := makeMessage(MessageAllBlocksRequest, nil)
 	p.inbox <- msgJson
 }

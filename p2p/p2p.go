@@ -16,6 +16,7 @@ func Upgrade(rw http.ResponseWriter, r *http.Request) {
 	// Get ip address (port in r.RemoteAddr is not the open port, so no use)
 	originIp := utils.Splitter(r.RemoteAddr, ":", 0)
 	openPort := r.URL.Query().Get("openPort")
+	fmt.Printf("Port %s wants a websocket upgrade from this node.\n", openPort)
 	// Don't allow connection if invalid ip or no open port
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return originIp != "" && openPort != ""
@@ -28,6 +29,7 @@ func Upgrade(rw http.ResponseWriter, r *http.Request) {
 // Add a peer (initiate a websocket connection with another node)
 // (e.g., :5000 requests a websocket upgrade to :4000)
 func AddPeer(address, port, myPort string) {
+	fmt.Printf("This node (port %s) wants to connect to port %s.\n", myPort, port)
 	url := fmt.Sprintf("ws://%s:%s/ws?openPort=%s", address, port, myPort)
 	// Request a websocket upgrade from the other node
 	// (2nd argument (nil) is request header, usually w/ credentials/cookies)
