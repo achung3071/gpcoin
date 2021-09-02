@@ -2,12 +2,10 @@ package p2p
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
-
-// Map of peers connected to this node (address -> peer)
-var Peers map[string]*peer = make(map[string]*peer)
 
 type peer struct {
 	address string
@@ -17,7 +15,26 @@ type peer struct {
 	port    string
 }
 
+type peers struct {
+	v map[string]*peer
+	m sync.Mutex
+}
+
+// Map of peers connected to this node (address -> peer)
+var Peers peers = peers{v: make(map[string]*peer)}
+
 // NON-MUTATING FUNCTIONS
+// Get a list of all peer addresses to return
+func AllPeers(p *peers) []string {
+	p.m.Lock() // Ensure peers are not updated while reading
+	defer p.m.Unlock()
+	peerList := []string{}
+	for key := range p.v {
+		peerList = append(peerList, key)
+	}
+	return peerList
+}
+
 // Initialize a new peer with the given connection, ip, port
 func initPeer(conn *websocket.Conn, address, port string) *peer {
 	key := fmt.Sprintf("%s:%s", address, port)
@@ -28,7 +45,7 @@ func initPeer(conn *websocket.Conn, address, port string) *peer {
 		key:     key,
 		port:    port,
 	}
-	Peers[key] = newPeer
+	Peers.v[key] = newPeer
 	go newPeer.read()  // listen to incoming messages from peer
 	go newPeer.write() // listen for new outgoing messages
 	return newPeer
@@ -37,8 +54,10 @@ func initPeer(conn *websocket.Conn, address, port string) *peer {
 // MUTATING FUNCTIONS
 // Close a peer's connection and inbox channel + delete from peer list
 func (p *peer) close() {
+	Peers.m.Lock()         // ensure peer map is locked while updating (no data race)
+	defer Peers.m.Unlock() // remove lock after map is updated
 	p.conn.Close()
-	delete(Peers, p.key) // Will close inbox channel
+	delete(Peers.v, p.key) // Will close inbox channel
 }
 
 // Continue to read and print from a peers
