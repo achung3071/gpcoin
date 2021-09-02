@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/achung3071/gpcoin/utils"
-	"github.com/boltdb/bolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 var db *bolt.DB
