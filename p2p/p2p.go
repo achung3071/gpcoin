@@ -23,10 +23,10 @@ func Upgrade(rw http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(rw, r, nil) // return ws connection
 	utils.ErrorHandler(err)
-	initPeer(conn, originIp, openPort)
+	p := initPeer(conn, originIp, openPort)
 	// Write message to new peer
 	time.Sleep(10 * time.Second)
-	conn.WriteMessage(websocket.TextMessage, []byte("Hello from port 4000!"))
+	p.inbox <- []byte("Hello from port 4000!")
 }
 
 // Add a peer (initiate a websocket connection with another node)
@@ -37,8 +37,8 @@ func AddPeer(address, port, myPort string) {
 	// (2nd argument (nil) is request header, usually w/ credentials/cookies)
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	utils.ErrorHandler(err)
-	initPeer(conn, address, port) // add to list of active peers
+	p := initPeer(conn, address, port) // add to list of active peers
 	// Write message to new peer
 	time.Sleep(5 * time.Second)
-	conn.WriteMessage(websocket.TextMessage, []byte("Hello from port 5000!"))
+	p.inbox <- []byte("Hello from port 5000!")
 }
