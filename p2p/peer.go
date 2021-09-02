@@ -60,15 +60,16 @@ func (p *peer) close() {
 	delete(Peers.v, p.key) // Will close inbox channel
 }
 
-// Continue to read and print from a peers
+// Continue to read and print from peers
 func (p *peer) read() {
 	defer p.close() // close after function (after loop break)
 	for {
-		_, msg, err := p.conn.ReadMessage() // blocks until message comes
+		var m Message
+		err := p.conn.ReadJSON(&m) // blocks until message comes
 		if err != nil {
 			break
 		}
-		fmt.Printf("%s", msg)
+		fmt.Println(m.Type)
 	}
 }
 
