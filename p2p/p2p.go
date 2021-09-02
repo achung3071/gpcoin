@@ -33,5 +33,6 @@ func AddPeer(address, port, myPort string) {
 	// (2nd argument (nil) is request header, usually w/ credentials/cookies)
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	utils.ErrorHandler(err)
-	initPeer(conn, address, port) // add to list of active peers
+	p := initPeer(conn, address, port) // add to list of active peers
+	p.sendNewestBlock()                // send newest block to peer
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/achung3071/gpcoin/blockchain"
+	"github.com/achung3071/gpcoin/utils"
 	"github.com/gorilla/websocket"
 )
 
@@ -69,8 +71,16 @@ func (p *peer) read() {
 		if err != nil {
 			break
 		}
-		fmt.Println(m.Type)
+		fmt.Println(m.Payload)
 	}
+}
+
+// Send newest block to the peer
+func (p *peer) sendNewestBlock() {
+	newestBlock, err := blockchain.FindBlock(blockchain.Blockchain().LastHash)
+	utils.ErrorHandler(err)
+	msgJson := makeMessage(MessageNewestBlock, newestBlock)
+	p.inbox <- msgJson
 }
 
 // Whenever message lands in peer inbox, send to message to peer
