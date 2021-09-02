@@ -1,18 +1,25 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/achung3071/gpcoin/utils"
 	bolt "go.etcd.io/bbolt"
 )
 
 var db *bolt.DB
+var dbName string = "blockchain.db"
 
 const (
-	dbName           string = "blockchain.db"
 	dataBucketName   string = "data"
 	dataBucketKey    string = "metadata"
 	blocksBucketName string = "blocks"
 )
+
+// DB name reset to include port when cli.Start() called
+func SetDBName(port int) {
+	dbName = fmt.Sprintf("blockchain_%d.db", port)
+}
 
 func DB() *bolt.DB {
 	if db == nil {

@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/achung3071/gpcoin/api"
+	"github.com/achung3071/gpcoin/db"
 	"github.com/achung3071/gpcoin/webapp"
 )
 
@@ -22,6 +23,7 @@ func Start() {
 	mode := flag.String("mode", "api", "Must be one of 'api', 'web'")
 	port := flag.Int("port", 5000, "Set the port that the server should run on")
 	flag.Parse()
+	db.SetDBName(*port)
 
 	switch *mode {
 	case "web":
