@@ -39,6 +39,8 @@ func AllPeers(p *peers) []string {
 
 // Initialize a new peer with the given connection, ip, port
 func initPeer(conn *websocket.Conn, address, port string) *peer {
+	Peers.m.Lock() // prevent data race for multiple peer initializations
+	defer Peers.m.Unlock()
 	key := fmt.Sprintf("%s:%s", address, port)
 	newPeer := &peer{
 		address: address,
