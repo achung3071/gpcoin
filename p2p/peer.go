@@ -62,7 +62,7 @@ func (p *peer) close() {
 	delete(Peers.v, p.key) // Will close inbox channel
 }
 
-// Continue to read and print from peers
+// Continue to read messages from peers
 func (p *peer) read() {
 	defer p.close() // close after function (after loop break)
 	for {
@@ -71,7 +71,7 @@ func (p *peer) read() {
 		if err != nil {
 			break
 		}
-		fmt.Println(m.Payload)
+		handleMessage(&m, p)
 	}
 }
 
