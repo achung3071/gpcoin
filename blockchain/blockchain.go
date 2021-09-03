@@ -177,6 +177,18 @@ func (b *blockchain) AddBlock() {
 	commitBlockchain(b)
 }
 
+// Replace blockchain with new set of blocks from another node
+func (b *blockchain) Replace(blocks []*Block) {
+	b.LastHash = blocks[0].Hash
+	b.CurrDifficulty = blocks[0].Difficulty
+	b.Height = len(blocks)
+	commitBlockchain(b)
+	db.EmptyBlocks()
+	for _, block := range blocks {
+		commitBlock(block)
+	}
+}
+
 // Load existing data into blockchain variable
 func (b *blockchain) restore(data []byte) {
 	utils.FromBytes(b, data)
