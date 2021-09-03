@@ -19,6 +19,7 @@ const (
 	MessageNewestBlock MessageType = iota // enumerate following constants
 	MessageAllBlocksRequest
 	MessageAllBlocksResponse
+	MessageNotifyNewBlock
 )
 
 // NON-MUTATING FUNCTIONS
@@ -26,6 +27,14 @@ const (
 func makeMessage(msgType MessageType, payload interface{}) []byte {
 	m := Message{Type: msgType, Payload: utils.ToJSON(payload)}
 	return utils.ToJSON(m)
+}
+
+// Broadcast a newly mined block to all peers
+func BroadcastNewBlock(b *blockchain.Block) {
+	for _, peer := range Peers.v {
+		m := makeMessage(MessageNotifyNewBlock, b)
+		peer.inbox <- m
+	}
 }
 
 // Handle an incoming message from a peer
@@ -54,6 +63,13 @@ func handleMessage(m *Message, p *peer) {
 
 }
 
+// Request all blocks from peer
+func requestAllBlocks(p *peer) {
+	fmt.Printf("Requesting %s for all blocks...\n", p.key)
+	msgJson := makeMessage(MessageAllBlocksRequest, nil)
+	p.inbox <- msgJson
+}
+
 // Send all blocks to peer
 func sendAllBlocks(p *peer) {
 	fmt.Printf("Sending %s all blocks in our blockchain...\n", p.key)
@@ -68,12 +84,5 @@ func sendNewestBlock(p *peer) {
 	newestBlock, err := blockchain.FindBlock(blockchain.Blockchain().LastHash)
 	utils.ErrorHandler(err)
 	msgJson := makeMessage(MessageNewestBlock, newestBlock)
-	p.inbox <- msgJson
-}
-
-// Request all blocks from peer
-func requestAllBlocks(p *peer) {
-	fmt.Printf("Requesting %s for all blocks...\n", p.key)
-	msgJson := makeMessage(MessageAllBlocksRequest, nil)
 	p.inbox <- msgJson
 }

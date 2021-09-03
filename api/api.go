@@ -118,7 +118,8 @@ func blocks(rw http.ResponseWriter, r *http.Request) {
 	case "GET":
 		json.NewEncoder(rw).Encode(blockchain.Blocks(blockchain.Blockchain()))
 	case "POST":
-		blockchain.Blockchain().AddBlock() // add to blockchain
+		block := blockchain.Blockchain().AddBlock() // add to blockchain
+		p2p.BroadcastNewBlock(block)
 		rw.WriteHeader(http.StatusCreated) // response 201
 	}
 }
@@ -141,7 +142,7 @@ func block(rw http.ResponseWriter, r *http.Request) {
 
 // Send blockchain metadata
 func status(rw http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(rw).Encode(blockchain.Blockchain())
+	blockchain.Status(blockchain.Blockchain(), rw)
 }
 
 // Response when total=true (showing total balance)

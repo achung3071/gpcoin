@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"encoding/json"
+	"net/http"
 	"sync"
 
 	"github.com/achung3071/gpcoin/db"
@@ -18,6 +20,7 @@ type blockchain struct {
 	LastHash       string
 	Height         int
 	CurrDifficulty int
+	m              sync.Mutex
 }
 
 var b *blockchain // Holds singleton instance of blockchain
@@ -55,6 +58,8 @@ func BalanceByAddress(address string, b *blockchain) int {
 
 // Get all blocks
 func Blocks(b *blockchain) []*Block {
+	b.m.Lock()
+	defer b.m.Unlock()
 	var blocks []*Block
 	currHash := b.LastHash
 	for {
@@ -118,6 +123,13 @@ func recalculateDifficulty(b *blockchain) int {
 	}
 }
 
+// Encode blockchain metadata into response writer (used in /status endpoint)
+func Status(b *blockchain, rw http.ResponseWriter) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	utils.ErrorHandler(json.NewEncoder(rw).Encode(b))
+}
+
 // Get all transactions in blockchain
 func Txs(b *blockchain) []*Tx {
 	txs := []*Tx{}
@@ -168,17 +180,20 @@ func UTxOutsByAddress(address string, b *blockchain) []*UTxOut {
 
 // MUTATING FUNCTIONS
 // Adds a new block to the blockchain & save in DB
-func (b *blockchain) AddBlock() {
+func (b *blockchain) AddBlock() *Block {
 	newBlock := createBlock(b.LastHash, b.Height+1, getDifficulty(b))
 	b.LastHash = newBlock.Hash
 	b.Height = newBlock.Height
 	// newBlock.Difficulty already updated using Blockchain().difficulty()
 	b.CurrDifficulty = newBlock.Difficulty
 	commitBlockchain(b)
+	return newBlock
 }
 
 // Replace blockchain with new set of blocks from another node
 func (b *blockchain) Replace(blocks []*Block) {
+	b.m.Lock()
+	defer b.m.Unlock()
 	b.LastHash = blocks[0].Hash
 	b.CurrDifficulty = blocks[0].Difficulty
 	b.Height = len(blocks)
