@@ -10,6 +10,13 @@ import (
 
 type MessageType int
 
+// Information to send when broadcasting peer
+type BroadcastPeerInfo struct {
+	NewPeerAddress string
+	NewPeerPort    string
+	ReceivingPort  string
+}
+
 type Message struct {
 	Type    MessageType
 	Payload []byte
@@ -20,6 +27,7 @@ const (
 	MessageAllBlocksRequest
 	MessageAllBlocksResponse
 	MessageNotifyNewBlock
+	MessageNotifyNewPeer
 	MessageNotifyNewTx
 )
 
@@ -34,9 +42,26 @@ func makeMessage(msgType MessageType, payload interface{}) []byte {
 func BroadcastNewBlock(b *blockchain.Block) {
 	Peers.m.Lock()
 	defer Peers.m.Unlock()
-	for _, peer := range Peers.v {
+	for _, p := range Peers.v {
 		m := makeMessage(MessageNotifyNewBlock, b)
-		peer.inbox <- m
+		p.inbox <- m
+	}
+}
+
+// Broadcast a newly added peer to all other peers, so they add new peer as well
+func BroadcastNewPeer(newPeer *peer) {
+	Peers.m.Lock()
+	defer Peers.m.Unlock()
+	for _, p := range Peers.v {
+		if p.key != newPeer.key { // if peer is not the newly added peer
+			payload := &BroadcastPeerInfo{
+				NewPeerAddress: newPeer.address,
+				NewPeerPort:    newPeer.port,
+				ReceivingPort:  p.port,
+			}
+			m := makeMessage(MessageNotifyNewPeer, payload)
+			p.inbox <- m
+		}
 	}
 }
 
@@ -44,9 +69,9 @@ func BroadcastNewBlock(b *blockchain.Block) {
 func BroadcastNewTx(tx *blockchain.Tx) {
 	Peers.m.Lock()
 	defer Peers.m.Unlock()
-	for _, peer := range Peers.v {
+	for _, p := range Peers.v {
 		m := makeMessage(MessageNotifyNewTx, tx)
-		peer.inbox <- m
+		p.inbox <- m
 	}
 }
 
@@ -76,6 +101,11 @@ func handleMessage(m *Message, p *peer) {
 		var payload *blockchain.Block
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
 		blockchain.Blockchain().AddBlockFromPeer(payload)
+	case MessageNotifyNewPeer:
+		var payload BroadcastPeerInfo
+		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
+		// broadcast is false b/c new peer has already been broadcasted to other peers
+		AddPeer(payload.NewPeerAddress, payload.NewPeerPort, payload.ReceivingPort, false)
 	case MessageNotifyNewTx:
 		var payload *blockchain.Tx
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))

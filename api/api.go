@@ -219,7 +219,8 @@ func peers(rw http.ResponseWriter, r *http.Request) {
 		err := json.NewDecoder(r.Body).Decode(&data)
 		utils.ErrorHandler(err)
 		myPort := port[1:] // remove ":"
-		p2p.AddPeer(data.Address, data.Port, myPort)
+		// broadcast is true b/c peer added via API request (not broadcasted yet)
+		p2p.AddPeer(data.Address, data.Port, myPort, true)
 		rw.WriteHeader(http.StatusCreated)
 	default:
 		rw.WriteHeader(http.StatusBadRequest)

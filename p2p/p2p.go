@@ -28,7 +28,7 @@ func Upgrade(rw http.ResponseWriter, r *http.Request) {
 
 // Add a peer (initiate a websocket connection with another node)
 // (e.g., :5000 requests a websocket upgrade to :4000)
-func AddPeer(address, port, myPort string) {
+func AddPeer(address, port, myPort string, broadcast bool) {
 	fmt.Printf("This node (port %s) wants to connect to port %s.\n", myPort, port)
 	url := fmt.Sprintf("ws://%s:%s/ws?openPort=%s", address, port, myPort)
 	// Request a websocket upgrade from the other node
@@ -36,5 +36,14 @@ func AddPeer(address, port, myPort string) {
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	utils.ErrorHandler(err)
 	p := initPeer(conn, address, port) // add to list of active peers
-	sendNewestBlock(p)                 // send newest block to peer
+	if broadcast {
+		// If new peer was added via API reqeust, then broadcast to other peers
+		// (NOTE: this will only broadcast the newly added peer to my peers,
+		// not other peers that this new peer is connected to)
+		BroadcastNewPeer(p)
+	} else {
+		// otherwise added via broadcast, so no need to broadcast again (inf. loop)
+		sendNewestBlock(p) // send newest block to peer
+	}
+
 }
