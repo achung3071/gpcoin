@@ -190,6 +190,17 @@ func (b *blockchain) AddBlock() *Block {
 	return newBlock
 }
 
+// Adds a new block broadcasted by a peer
+func (b *blockchain) AddBlockFromPeer(block *Block) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.Height += 1
+	b.LastHash = block.Hash
+	b.CurrDifficulty = block.Difficulty
+	commitBlockchain(b)
+	commitBlock(block)
+}
+
 // Replace blockchain with new set of blocks from another node
 func (b *blockchain) Replace(blocks []*Block) {
 	b.m.Lock()

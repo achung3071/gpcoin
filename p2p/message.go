@@ -31,6 +31,8 @@ func makeMessage(msgType MessageType, payload interface{}) []byte {
 
 // Broadcast a newly mined block to all peers
 func BroadcastNewBlock(b *blockchain.Block) {
+	Peers.m.Lock()
+	defer Peers.m.Unlock()
 	for _, peer := range Peers.v {
 		m := makeMessage(MessageNotifyNewBlock, b)
 		peer.inbox <- m
@@ -59,6 +61,10 @@ func handleMessage(m *Message, p *peer) {
 		var payload []*blockchain.Block
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
 		blockchain.Blockchain().Replace(payload)
+	case MessageNotifyNewBlock:
+		var payload *blockchain.Block
+		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
+		blockchain.Blockchain().AddBlockFromPeer(payload)
 	}
 
 }
