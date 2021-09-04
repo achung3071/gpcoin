@@ -20,6 +20,7 @@ const (
 	MessageAllBlocksRequest
 	MessageAllBlocksResponse
 	MessageNotifyNewBlock
+	MessageNotifyNewTx
 )
 
 // NON-MUTATING FUNCTIONS
@@ -35,6 +36,16 @@ func BroadcastNewBlock(b *blockchain.Block) {
 	defer Peers.m.Unlock()
 	for _, peer := range Peers.v {
 		m := makeMessage(MessageNotifyNewBlock, b)
+		peer.inbox <- m
+	}
+}
+
+// Broadcast a newly posted transaction to all peers
+func BroadcastNewTx(tx *blockchain.Tx) {
+	Peers.m.Lock()
+	defer Peers.m.Unlock()
+	for _, peer := range Peers.v {
+		m := makeMessage(MessageNotifyNewTx, tx)
 		peer.inbox <- m
 	}
 }
@@ -65,6 +76,10 @@ func handleMessage(m *Message, p *peer) {
 		var payload *blockchain.Block
 		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
 		blockchain.Blockchain().AddBlockFromPeer(payload)
+	case MessageNotifyNewTx:
+		var payload *blockchain.Tx
+		utils.ErrorHandler(json.Unmarshal(m.Payload, &payload))
+		blockchain.Mempool().AddTxFromPeer(payload)
 	}
 
 }

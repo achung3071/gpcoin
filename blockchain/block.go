@@ -39,7 +39,7 @@ func createBlock(prevHash string, height int, diff int) *Block {
 	}
 	newBlock.mine() // provide PoW
 	// flush mempool and get confirmed transactions
-	newBlock.Transactions = Mempool.ConfirmTxs()
+	newBlock.Transactions = Mempool().ConfirmTxs()
 	commitBlock(newBlock)
 	return newBlock
 }

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/achung3071/gpcoin/utils"
@@ -49,12 +50,21 @@ type UTxOut struct {
 
 // Mempool is where unconfirmed transactions are (before added to a block)
 type mempool struct {
-	Txs []*Tx `json:"txs"`
+	Txs map[string]*Tx `json:"txs"`
+	m   sync.Mutex
 }
 
-var Mempool *mempool = &mempool{}
+var m *mempool
+var memOnce sync.Once
 var errNoMoney error = errors.New("not enough funds to send specified amount")
 var errInvalidTx error = errors.New("inputs are not valid txOuts for the given wallet")
+
+func Mempool() *mempool {
+	memOnce.Do(func() {
+		m = &mempool{Txs: make(map[string]*Tx)}
+	})
+	return m
+}
 
 // NON-MUTATING FUNCTIONS
 // Creates a transaction from the blockchain that gives a reward to the miner
@@ -75,7 +85,7 @@ func createCoinbaseTx() *Tx {
 func isOnMempool(uTxOut UTxOut) bool {
 	exists := false
 Outer:
-	for _, tx := range Mempool.Txs {
+	for _, tx := range Mempool().Txs {
 		for _, txIn := range tx.TxIns {
 			if txIn.TxId == uTxOut.TxId && txIn.Index == uTxOut.Index {
 				exists = true // uTxOut is already being used on the mempool
@@ -149,22 +159,30 @@ func validate(tx *Tx) bool {
 
 // MUTATING FUNCTIONS
 // Add a transaction to a certain address on the mempool
-func (m *mempool) AddTx(to string, amount int) error {
+func (m *mempool) AddTx(to string, amount int) (*Tx, error) {
 	tx, err := makeTx(wallet.Wallet().Address, to, amount)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.Txs = append(m.Txs, tx)
-	return nil
+	m.Txs[tx.Id] = tx
+	return tx, nil
+}
+
+// Add a transaction from a peer on the network
+func (m *mempool) AddTxFromPeer(tx *Tx) {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.Txs[tx.Id] = tx
 }
 
 // Empties mempool and returns now-confirmed transactions
 func (m *mempool) ConfirmTxs() []*Tx {
 	// reward for mining new block & confirming transactions
-	coinbaseTx := createCoinbaseTx()
-	txs := m.Txs
-	txs = append(txs, coinbaseTx)
-	m.Txs = []*Tx{} // empty mempool
+	txs := []*Tx{createCoinbaseTx()}
+	for _, tx := range m.Txs {
+		txs = append(txs, tx)
+	}
+	m.Txs = make(map[string]*Tx) // empty mempool
 	return txs
 }
 

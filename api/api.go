@@ -168,7 +168,7 @@ func balance(rw http.ResponseWriter, r *http.Request) {
 
 // Check the current mempool
 func mempool(rw http.ResponseWriter, r *http.Request) {
-	utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Mempool.Txs))
+	utils.ErrorHandler(json.NewEncoder(rw).Encode(blockchain.Mempool().Txs))
 }
 
 type postTransactionsBody struct {
@@ -183,12 +183,13 @@ func transactions(rw http.ResponseWriter, r *http.Request) {
 		var data postTransactionsBody
 		json.NewDecoder(r.Body).Decode(&data) // get data
 		// Add the new transaction to the blockchain mempool
-		err := blockchain.Mempool.AddTx(data.To, data.Amount)
+		tx, err := blockchain.Mempool().AddTx(data.To, data.Amount)
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(rw).Encode(errResponse{err.Error()})
 			return
 		}
+		p2p.BroadcastNewTx(tx)             // send new tx to all peers
 		rw.WriteHeader(http.StatusCreated) // successfully created transaction
 	default:
 		return

@@ -194,11 +194,22 @@ func (b *blockchain) AddBlock() *Block {
 func (b *blockchain) AddBlockFromPeer(block *Block) {
 	b.m.Lock()
 	defer b.m.Unlock()
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	b.Height += 1
 	b.LastHash = block.Hash
 	b.CurrDifficulty = block.Difficulty
 	commitBlockchain(b)
 	commitBlock(block)
+
+	// Remove txs in new block from mempool
+	for _, tx := range block.Transactions {
+		_, ok := m.Txs[tx.Id]
+		if ok {
+			delete(m.Txs, tx.Id)
+		}
+	}
 }
 
 // Replace blockchain with new set of blocks from another node
