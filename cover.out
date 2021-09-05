@@ -1,0 +1,10 @@
+mode: set
+github.com/achung3071/gpcoin/utils/utils.go:13.30,14.16 1 1
+github.com/achung3071/gpcoin/utils/utils.go:14.16,16.3 1 0
+github.com/achung3071/gpcoin/utils/utils.go:19.36,24.2 4 1
+github.com/achung3071/gpcoin/utils/utils.go:26.44,29.2 2 0
+github.com/achung3071/gpcoin/utils/utils.go:31.33,35.2 3 1
+github.com/achung3071/gpcoin/utils/utils.go:37.48,39.24 2 0
+github.com/achung3071/gpcoin/utils/utils.go:42.2,42.20 1 0
+github.com/achung3071/gpcoin/utils/utils.go:39.24,41.3 1 0
+github.com/achung3071/gpcoin/utils/utils.go:45.35,49.2 3 0
