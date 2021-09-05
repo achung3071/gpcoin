@@ -23,6 +23,30 @@ const (
 	walletFileName string = "gpcoin.wallet"
 )
 
+// Interface for isolating filesystem side effects (allows for unit testing)
+type fileLayer interface {
+	walletFileExists() bool
+	writeFile(name string, data []byte) error
+	readFile(name string) ([]byte, error)
+}
+
+// Struct for implementing fileLayer interface
+type layer struct{}
+
+func (layer) walletFileExists() bool {
+	_, err := os.Stat(walletFileName)
+	exists := !os.IsNotExist(err)
+	return exists
+}
+
+func (layer) writeFile(name string, data []byte) error {
+	return os.WriteFile(name, data, 0644) // read-write perms
+}
+
+func (layer) readFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
 // Note that the wallet address is actualy the public key associated with
 // the private key (which people can use to verify that you signed transactions)
 type wallet struct {
@@ -31,13 +55,14 @@ type wallet struct {
 }
 
 var w *wallet
+var files fileLayer = layer{}
 
 // NON-MUTATING FUNCTIONS
 // Access singleton instance of wallet
 func Wallet() *wallet {
 	if w == nil {
 		w = &wallet{}
-		if walletFileExists() {
+		if files.walletFileExists() {
 			// yes -> load existing wallet
 			w.privateKey = restoreKey()
 		} else {
@@ -54,7 +79,7 @@ func Wallet() *wallet {
 func commitWallet(w *wallet) {
 	privKeyBytes, err := x509.MarshalECPrivateKey(w.privateKey)
 	utils.ErrorHandler(err)
-	err = os.WriteFile(walletFileName, privKeyBytes, 0644)
+	err = files.writeFile(walletFileName, privKeyBytes)
 	utils.ErrorHandler(err)
 }
 
@@ -94,7 +119,7 @@ func restoreBigInts(encoding string) (*big.Int, *big.Int, error) {
 
 // Restore a private key from a wallet file
 func restoreKey() *ecdsa.PrivateKey {
-	keyAsBytes, err := os.ReadFile(walletFileName)
+	keyAsBytes, err := files.readFile(walletFileName)
 	utils.ErrorHandler(err)
 	key, err := x509.ParseECPrivateKey(keyAsBytes)
 	utils.ErrorHandler(err)
@@ -124,11 +149,4 @@ func Verify(hash, signature, address string) bool {
 		Y:     y,
 	}
 	return ecdsa.Verify(&publicKey, hashBytes, r, s)
-}
-
-// Check if a wallet file exists
-func walletFileExists() bool {
-	_, err := os.Stat(walletFileName)
-	exists := !os.IsNotExist(err) // check if error caused by nonexistent file
-	return exists
 }
