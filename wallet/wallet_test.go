@@ -3,6 +3,7 @@ package wallet
 import (
 	"crypto/x509"
 	"encoding/hex"
+	"reflect"
 	"testing"
 )
 
@@ -12,12 +13,52 @@ const (
 	testSignature string = "bea7c82061e4e14d08bb6ea12a5764afb52efac9c77986e4b653ce22a15cea45c964b565261cf02ee6cc33ae6ccdb5b3cd097576203e85dd213fc4dd20dbc5be"
 )
 
+// Implement a mock interface for testing
+type mockLayer struct {
+	mockWalletFileExists func() bool
+}
+
+func (m mockLayer) walletFileExists() bool {
+	return m.mockWalletFileExists()
+}
+
+func (mockLayer) writeFile(name string, data []byte) error {
+	return nil
+}
+
+func (mockLayer) readFile(name string) ([]byte, error) {
+	return x509.MarshalECPrivateKey(makeTestWallet().privateKey)
+}
+
 func makeTestWallet() *wallet {
 	w := &wallet{}
 	keyBytes, _ := hex.DecodeString(testKey)
 	w.privateKey, _ = x509.ParseECPrivateKey(keyBytes)
 	w.Address = keyToAddress(w.privateKey)
 	return w
+}
+
+func TestWallet(t *testing.T) {
+	oldFiles := files
+	defer func() { files = oldFiles }()
+
+	t.Run("New wallet file created when file doesn't exist", func(t *testing.T) {
+		files = mockLayer{mockWalletFileExists: func() bool { return false }}
+		w = nil
+		testWallet := Wallet()
+		if reflect.TypeOf(testWallet) != reflect.TypeOf(&wallet{}) {
+			t.Error("Wallet() did not return a new wallet when no wallet file exists")
+		}
+	})
+
+	t.Run("Wallet restored from existing file", func(t *testing.T) {
+		files = mockLayer{mockWalletFileExists: func() bool { return true }}
+		w = nil
+		testWallet := Wallet()
+		if reflect.TypeOf(testWallet) != reflect.TypeOf(&wallet{}) {
+			t.Error("Wallet() did not restore wallet from existing file")
+		}
+	})
 }
 
 func TestSign(t *testing.T) {
