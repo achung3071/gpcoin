@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -78,4 +79,41 @@ func TestErrorHandler(t *testing.T) {
 	if !called {
 		t.Error("ErrorHandler did not call the panic function")
 	}
+}
+
+func TestFromBytes(t *testing.T) {
+	type test struct {
+		Test string
+	}
+	input := test{"test"}
+	var restored test
+	b := ToBytes(input)
+	FromBytes(&restored, b)
+	if !reflect.DeepEqual(input, restored) {
+		t.Error("FromBytes was unable to restore the input.")
+	}
+}
+
+func TestToJSON(t *testing.T) {
+	type test struct {
+		Test string
+	}
+	input := test{"test"}
+	b := ToJSON(input)
+	t.Run("Output is a slice of bytes", func(t *testing.T) {
+		k := reflect.TypeOf(b).Kind()
+		if k != reflect.Slice {
+			t.Errorf("Expected a slice of bytes, got %s", k)
+		}
+	})
+	t.Run("Output can be unmarshaled to a struct", func(t *testing.T) {
+		var restored test
+		err := json.Unmarshal(b, &restored)
+		if err != nil {
+			t.Errorf("Error while unmarshaling JSON: %s", err.Error())
+		}
+		if !reflect.DeepEqual(input, restored) {
+			t.Error("Unmarshaled JSON is not the same as the input.")
+		}
+	})
 }
