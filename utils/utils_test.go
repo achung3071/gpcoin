@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -39,4 +40,42 @@ func TestToBytes(t *testing.T) {
 			t.Errorf("Expected a slice of bytes, got %s", k)
 		}
 	})
+}
+
+func TestSplitter(t *testing.T) {
+	type test struct {
+		input  string
+		sep    string
+		index  int
+		output string
+	}
+	// Table testing for Splitter()
+	tests := []test{
+		{input: "11:0:6", sep: ":", index: 2, output: "6"},
+		{input: "11:0:6", sep: ":", index: 5, output: ""},
+		{input: "11:0:6", sep: ":", index: -2, output: ""},
+		{input: "11:0:6", sep: "/", index: 0, output: "11:0:6"},
+	}
+	for _, tc := range tests {
+		result := Splitter(tc.input, tc.sep, tc.index)
+		if result != tc.output {
+			t.Errorf("Expected %s, got %s", tc.output, result)
+		}
+	}
+}
+
+func TestErrorHandler(t *testing.T) {
+	oldPanic := panic
+	defer func() {
+		panic = oldPanic
+	}()
+	called := false
+	panic = func(v ...interface{}) {
+		called = true
+	}
+	newError := errors.New("test error")
+	ErrorHandler(newError)
+	if !called {
+		t.Error("ErrorHandler did not call the panic function")
+	}
 }
