@@ -50,21 +50,16 @@ func TestBlocks(t *testing.T) {
 	oldStorage := dbStorage
 	defer func() { dbStorage = oldStorage }()
 	t.Run("Blocks() should return slice of blocks", func(t *testing.T) {
-		blocksAdded := 0
+		blocks := []*Block{{PrevHash: "x"}, {PrevHash: ""}}
+		currBlock := 0
 		dbStorage = mockDB{mockFindBlock: func(string) []byte {
-			var block *Block
-			if blocksAdded == 0 {
-				block = &Block{Hash: "y", PrevHash: "x"}
-			} else if blocksAdded == 1 {
-				block = &Block{Hash: "x", PrevHash: ""}
-			}
-			blocksAdded++
-			return utils.ToBytes(block)
+			defer func() { currBlock++ }()
+			return utils.ToBytes(blocks[currBlock])
 		}}
-		blocks := Blocks(&blockchain{LastHash: "y"})
-		if reflect.TypeOf(blocks) != reflect.TypeOf([]*Block{}) {
+		blocksResult := Blocks(&blockchain{LastHash: "y"})
+		if reflect.TypeOf(blocksResult) != reflect.TypeOf([]*Block{}) {
 			t.Error("Blocks() did not return a slice of blocks")
-		} else if len(blocks) != 2 {
+		} else if len(blocksResult) != 2 {
 			t.Errorf("Expected Blocks() to return a slice of length 2, got %d", len(blocks))
 		}
 	})
@@ -95,6 +90,42 @@ func TestFindTx(t *testing.T) {
 			t.Error("Existing transaction not found.")
 		} else if tx.Id != "test" {
 			t.Errorf("Expected transaction with id 'test', got %s", tx.Id)
+		}
+	})
+}
+
+func TestGetDifficulty(t *testing.T) {
+	oldStorage := dbStorage
+	defer func() { dbStorage = oldStorage }()
+	blocks := []*Block{
+		{PrevHash: "x"},
+		{PrevHash: "x"},
+		{PrevHash: "x"},
+		{PrevHash: "x"},
+		{PrevHash: ""},
+	}
+	// Needed b/c recalculateDifficulty calls Blocks(), which calls FindBlock()
+	currBlock := 0
+	dbStorage = mockDB{mockFindBlock: func(string) []byte {
+		defer func() { currBlock++ }()
+		return utils.ToBytes(blocks[currBlock])
+	}}
+	t.Run("Should only update difficulty when height is a multiple of the update interval", func(t *testing.T) {
+		type test struct {
+			height         int
+			expectedOutput int
+		}
+		tests := []test{
+			{height: 0, expectedOutput: defaultDifficulty},
+			{height: 2, expectedOutput: defaultDifficulty},
+			{height: 5, expectedOutput: defaultDifficulty + 1},
+		}
+		for _, tc := range tests {
+			bc := &blockchain{Height: tc.height, CurrDifficulty: defaultDifficulty}
+			got := getDifficulty(bc)
+			if got != tc.expectedOutput {
+				t.Errorf("getDifficulty() should return %d got %d", tc.expectedOutput, got)
+			}
 		}
 	})
 }
