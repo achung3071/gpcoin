@@ -23,7 +23,18 @@ type blockchain struct {
 	m              sync.Mutex
 }
 
-var b *blockchain // Holds singleton instance of blockchain
+// Storage interface as an adapter for different storage types
+// (BoltDB, fake database for testing, etc.)
+type storage interface {
+	FindBlock(hash string) []byte
+	SaveBlock(hash string, data []byte)
+	EmptyBlocks()
+	SaveBlockchain(data []byte)
+	LoadBlockchain() []byte
+}
+
+var b *blockchain                   // Holds singleton instance of blockchain
+var dbStorage storage = db.BoltDB{} // Layer for interacting w/ storage
 var once sync.Once
 
 // NON-MUTATING FUNCTIONS
@@ -34,7 +45,7 @@ func Blockchain() *blockchain {
 		b = &blockchain{
 			Height: 0,
 		}
-		chainData := db.Blockchain()
+		chainData := dbStorage.LoadBlockchain()
 		if chainData == nil { // blockchain not in db
 			// ensure AddBlock() does not call Blockchain() again,
 			// or else it will result in a deadlock (circularity)
@@ -77,7 +88,7 @@ func Blocks(b *blockchain) []*Block {
 
 // Save blockchain to DB
 func commitBlockchain(b *blockchain) {
-	db.SaveBlockchain(utils.ToBytes(b))
+	dbStorage.SaveBlockchain(utils.ToBytes(b))
 }
 
 // Get difficulty of blockchain (i.e., how many 0s need to be in front of block hash)
@@ -220,7 +231,7 @@ func (b *blockchain) Replace(blocks []*Block) {
 	b.CurrDifficulty = blocks[0].Difficulty
 	b.Height = len(blocks)
 	commitBlockchain(b)
-	db.EmptyBlocks()
+	dbStorage.EmptyBlocks()
 	for _, block := range blocks {
 		commitBlock(block)
 	}

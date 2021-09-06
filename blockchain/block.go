@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/achung3071/gpcoin/db"
 	"github.com/achung3071/gpcoin/utils"
 )
 
@@ -24,7 +23,7 @@ var ErrBlockNotFound error = errors.New("Block with given hash not found")
 // NON-MUTATING FUNCTIONS
 // Save block in DB
 func commitBlock(b *Block) {
-	db.SaveBlock(b.Hash, utils.ToBytes(b))
+	dbStorage.SaveBlock(b.Hash, utils.ToBytes(b))
 }
 
 // Create a new block (mine and add mempool transactions)
@@ -46,7 +45,7 @@ func createBlock(prevHash string, height int, diff int) *Block {
 
 // Find block from DB based on hash
 func FindBlock(hash string) (*Block, error) {
-	blockBytes := db.Block(hash)
+	blockBytes := dbStorage.FindBlock(hash)
 	if blockBytes == nil { // non-existent
 		return nil, ErrBlockNotFound
 	}

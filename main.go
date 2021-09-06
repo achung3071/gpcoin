@@ -7,5 +7,6 @@ import (
 
 func main() {
 	defer db.Close() // close db connection when program exits
+	db.InitDB()
 	cli.Start()
 }
