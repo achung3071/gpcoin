@@ -84,11 +84,11 @@ github.com/achung3071/gpcoin/blockchain/blockchain.go:184.6,184.11 1 0
 github.com/achung3071/gpcoin/blockchain/blockchain.go:173.22,180.31 2 0
 github.com/achung3071/gpcoin/blockchain/blockchain.go:180.31,182.8 1 0
 github.com/achung3071/gpcoin/blockchain/blockchain.go:194.40,202.2 6 1
-github.com/achung3071/gpcoin/blockchain/blockchain.go:205.53,218.40 10 0
-github.com/achung3071/gpcoin/blockchain/blockchain.go:218.40,220.9 2 0
-github.com/achung3071/gpcoin/blockchain/blockchain.go:220.9,222.4 1 0
-github.com/achung3071/gpcoin/blockchain/blockchain.go:227.47,235.31 8 0
-github.com/achung3071/gpcoin/blockchain/blockchain.go:235.31,237.3 1 0
+github.com/achung3071/gpcoin/blockchain/blockchain.go:205.53,218.40 10 1
+github.com/achung3071/gpcoin/blockchain/blockchain.go:218.40,220.9 2 1
+github.com/achung3071/gpcoin/blockchain/blockchain.go:220.9,222.4 1 1
+github.com/achung3071/gpcoin/blockchain/blockchain.go:227.47,235.31 8 1
+github.com/achung3071/gpcoin/blockchain/blockchain.go:235.31,237.3 1 1
 github.com/achung3071/gpcoin/blockchain/blockchain.go:241.43,243.2 1 1
 github.com/achung3071/gpcoin/blockchain/transaction.go:62.25,63.20 1 1
 github.com/achung3071/gpcoin/blockchain/transaction.go:66.2,66.10 1 1
