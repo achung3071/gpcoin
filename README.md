@@ -1,32 +1,70 @@
-## Signing and verifying transactions using wallets
+# GPCoin
 
-The whole point of signing and verifying transactions is to ensure that the person initiating the transaction
-is not using funds which do not belong to them.
+GPCoin is a basic cryptocurrency written in the Go language. It should be noted that this GPCoin does not have any
+inherent value — it is simply used to illustrate the concept of blockchain currency. This is also why it is called
+GPCoin, as GP stands for 거품 (guh-poom), which means "bubble" in Korean & is used to refer to something that looks
+polished on the outside but has no actual value.
 
-Let's say there are two people on the network: Andrew and an impostor. Andrew has received 50 GPCoins from a
-previous transaction output. Without signatures and verification, the impostor can pretend to be Andrew by
-initiating a transaction using Andrew's previous transaction outputs. There is no way to verify whether it is
-Andrew initiating the transaction & whether the funds belong to the person initiating the transaction. We need
-some sort of security mechanism for ensuring that (a) no one else can use money that I own, and (b) I cannot
-use the money of other people.
+## Setup
 
-Enter wallets. Each person has their own **wallet**, which holds a _private key_, as well as an **address**,
-which is the _public key_ associated with their wallet/private key. A security system is implemented as follows:
+### Downloading dependencies
 
-1. When initiating a transaction, I specify transaction inputs, and sign the transaction (i.e., create a signature)
-   using my wallet/private key.
-2. Each transaction input has a 1-to-1 correspondence with a previous transaction output. Therefore, we can find
-   all the previous transaction outputs corresponding to my current inputs.
-3. The previous transaction outputs have an address, which is a public key. If this address/public key is indeed mine
-   (i.e., if I actually own these funds), I should be able to use this address to verify that my wallet/private key was
-   used to create the newly initiated transaction’s signature.
-4. Upon successful verification, we can now add this new transaction to the mempool and subsequently the blockchain.
+Run `go mod download` in the root directory of this repository. Make sure to have Go version &ge; 1.16.
 
-We can now see how such a system would work against an "impostor" who tries to use someone else's funds:
+### Running the application
 
-1. The impostor says “I’m Andrew, and I want to initiate this transaction. So I’ll use his previous funds.”
-2. The impostor’s wallet/private key is not associated with Andrew's address (public key).
-3. When they try to initiate the transaction, they will sign the transaction with their own wallet/private key.
-4. However, Andrew's address (public key) will fail to verify the signature, since it was signed using the impostor’s
-   wallet/private key. Therefore, we know that the funds don’t belong to this person & it is not actually Andrew
-   initiating the transaction, so we block it from being added to the mempool.
+The most basic command is `go run main.go`. This will begin running the REST API for the blockchain on port 5000.
+
+Here are the flags that can be used for the project:
+
+- `-mode`: Can take on values `api` or `web`. `api` initializes the REST API endpoints for interacting with the
+  cryptocurrency, while `web` hosts the HTML blockchain explorer web application (relevant files can be found in
+  the [/webapp](webapp) folder).
+- `-port`: Can take on any valid integer value for the port hosting the application. Default is `5000`.
+
+Additionally, the `-race` flag can be used (e.g., `go run -race main.go -mode=api -port=4000`) to check for existing
+data race conditions while the application is running.
+
+## Usage
+
+### Interacting with the blockchain
+
+The genesis block in the blockchain is created when calling any of the API endpoints interacting with the blockchain
+(e.g., `GET /blocks`). Other endpoints for actions such as mining a new block or adding a new transaction to the mempool
+can be found in the HTTP response to `GET /` (see [api/endpoints.go](api/endpoints.go) for reference).
+
+### P2P network
+
+The code in this repository can be interpreted as the code for a single node in a P2P network. To simulate multiple peers,
+one can run the following commands:
+
+- Initialize nodes (run `go run main.go -port=xxxx`) on multiple ports (e.g., 2000, 3000, 4000, 5000).
+- Ex. To make port 3000 send a websocket upgrade request to port 4000, send `POST /peers` to localhost:3000 with the body
+
+      {address: "127.0.0.1", port: "4000"}.
+
+  The nodes on port 3000 and 4000 will be peers.
+
+- Ex. To make port 5000 be peers with 3000 and 4000, send `POST /peers` to localhost:3000 with the body
+
+      {address: "127.0.0.1", port: "5000"}
+
+  5000 will be added to the peers of 3000, and 3000 will broadcast 5000 to port 4000 so that the nodes are all conected.
+
+- Once a P2P network is constructed, interactions with the blockchain (adding a transaction, mining a block, etc.) will be
+  replicated across all peers in a synchronized manner.
+
+### Running tests
+
+Tests can be run by simply running the command `go test ./...`.
+
+`go test -v -coverprofile=cover.out ./... && go tool cover -html=cover.out` will print all logs from the test cases, generate
+a report of test coverage and display it in the browser as an HTML file.
+
+## Remaining action items
+
+- Refactor comments to give better API documentation in Godoc.
+- Refactor and update web application to more widely interact with the blockchain.
+- Make blockchain searching functions (e.g., UTxOutsByAddress) more performant.
+- Handle errors better in a variety of ways based on situation (i.e., don't just log.Panic() on every error).
+- Create a marshaler for checking whether HTTP request body data types are valid.
